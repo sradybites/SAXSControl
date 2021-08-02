@@ -307,7 +307,7 @@ class Main:
         self.elveflow_sheath_volume_box = tk.Entry(self.config_page, textvariable=self.elveflow_sheath_volume)
 
         # Make Instrument
-        self.AvailablePorts = SAXSDrivers.list_available_ports()
+        self.AvailablePorts = []#SAXSDrivers.list_available_ports()
         self.controller = SAXSDrivers.SAXSController(timeout=0.1)
         self.instruments = []
         self.pump = None
@@ -319,7 +319,6 @@ class Main:
         self.is_insert_sheath_purging = False
         # Setup Page
         self.hardware_config_options = ("Pump", "Oil Valve", "Sample/Buffer Valve", "Loading Valve", "Purge", "cerberus Oil", "cerberus Load", "cerberus Pump")
-        self.AvailablePorts = SAXSDrivers.list_available_ports()
         self.setup_page_buttons = []
         self.setup_page_variables = []
         self.refresh_com_ports = tk.Button(self.setup_page, text="Refresh COM", command=lambda: self.refresh_com_list())
@@ -532,7 +531,7 @@ class Main:
         self.ControllerCOM.grid(row=1, column=0)
         self.ControllerSet.grid(row=1, column=2)
         self.I2CScanButton.grid(row=1, column=3)
-        self.refresh_com_list()
+        #self.refresh_com_list()
         # FlowPath
         self.flowpath.grid(row=0, column=0)
         # Python Log
@@ -685,7 +684,7 @@ class Main:
                 self.elveflow_display.start()
             except Exception as e:
                 self.python_logger.warning("Something went wrong when restarting the Elveflow: %s" % e)
-        
+
         # Instrument Config
         # Clear existing devices
         for line in self.manual_page_buttons:
@@ -2121,7 +2120,7 @@ class Main:
         for i in range(len(self.setup_page_buttons)):
             for y in range(len(self.setup_page_buttons[i])):
                 self.setup_page_buttons[i][y].grid(row=i+2, column=y, sticky=tk.W+tk.E)
-        self.refresh_com_list()
+        #self.refresh_com_list()
         self.add_pump_control_buttons()
         if hardware != "":
             self.configure_to_hardware(hardware, instrument_index)
@@ -2180,10 +2179,11 @@ class Main:
                 self.manual_page_buttons[i][y].grid(row=i+1, column=y, sticky=tk.W+tk.E)
 
     def refresh_com_list(self):
-        self.ControllerCOM.updatelist(SAXSDrivers.list_available_ports(self.AvailablePorts))
+        portlist = SAXSDrivers.list_available_ports(self.AvailablePorts)
+        self.ControllerCOM.updatelist(portlist)
         for button in self.setup_page_buttons:
             if isinstance(button[0], COMPortSelector):
-                button[0].updatelist(SAXSDrivers.list_available_ports(self.AvailablePorts))
+                button[0].updatelist(portlist)
 
     def add_rheodyne_set_buttons(self, address=-1, name="Rheodyne", hardware="", pc_connect=True):
         self.instruments.append(SAXSDrivers.Rheodyne(logger=self.python_logger, address_I2C=address, name=name, hardware_configuration=hardware, lock=self._lock, pc_connect=pc_connect))
@@ -2210,7 +2210,7 @@ class Main:
             for y in range(len(self.setup_page_buttons[i])):
                 self.setup_page_buttons[i][y].grid(row=i+2, column=y, sticky=tk.W+tk.E)
         self.AddRheodyneControlButtons()
-        self.refresh_com_list()
+        #self.refresh_com_list()
         if hardware != "":
             self.configure_to_hardware(hardware, instrument_index)
         # self.refresh_dropdown()
@@ -2255,7 +2255,7 @@ class Main:
             for y in range(len(self.setup_page_buttons[i])):
                 self.setup_page_buttons[i][y].grid(row=i+2, column=y, sticky=tk.W+tk.E)
         self.AddVICIControlButtons()
-        self.refresh_com_list()
+        #self.refresh_com_list()
         if hardware != "":
             self.configure_to_hardware(hardware, instrument_index)
 
