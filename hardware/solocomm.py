@@ -321,11 +321,11 @@ def initConnections(MainGui, host='128.84.182.214:6510'):
 
 class ControlThread(threading.Thread):
 
-    def __init__(self, ADXComm, MainGUI):
+    def __init__(self, MainGUI):
 
         threading.Thread.__init__(self)
 
-        self.ADXComm = ADXComm
+
         self.MainGUI = MainGUI
 
         self.abortProcess = False

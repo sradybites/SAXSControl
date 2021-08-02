@@ -121,6 +121,14 @@ class Main:
         self.loading_LSoap_var = tk.IntVar()
         self.loading_Water_var = tk.IntVar()
         self.loading_Air_var = tk.IntVar()
+        # set Variables
+        self.loading_cell_var.set(2)
+        self.loading_load_var.set(3)
+        self.loading_HSoap_var.set(6)
+        self.loading_LSoap_var.set(1)
+        self.loading_Water_var.set(5)
+        self.loading_Air_var.set(4)
+
         # Entry
         self.loading_cell_entry = tk.Spinbox(self.config_page, textvariable=self.loading_cell_var, width=3)
         self.loading_load_entry = tk.Spinbox(self.config_page, textvariable=self.loading_load_var, width=3)
@@ -144,6 +152,13 @@ class Main:
         self.cerberus_loading_LSoap_var = tk.IntVar()
         self.cerberus_loading_Water_var = tk.IntVar()
         self.cerberus_loading_Air_var = tk.IntVar()
+        # Set the variables
+        self.cerberus_loading_cell_var.set(1)
+        self.cerberus_loading_load_var.set(6)
+        self.cerberus_loading_HSoap_var.set(3)
+        self.cerberus_loading_LSoap_var.set(2)
+        self.cerberus_loading_Water_var.set(4)
+        self.cerberus_loading_Air_var.set(5)
         # Entry
         self.cerberus_loading_cell_entry = tk.Spinbox(self.config_page, textvariable=self.cerberus_loading_cell_var, width=3)
         self.cerberus_loading_load_entry = tk.Spinbox(self.config_page, textvariable=self.cerberus_loading_load_var, width=3)
@@ -163,6 +178,9 @@ class Main:
         self.oil_pump_var = tk.IntVar()
         self.oil_waste_var = tk.IntVar()
         self.oil_insertpurge_var = tk.IntVar()
+        self.oil_pump_var.set(4)
+        self.oil_waste_var.set(5)
+        self.oil_insertpurge_var.set(1)
 
         self.oil_pump_entry = tk.Spinbox(self.config_page, textvariable=self.oil_pump_var, width=3)
         self.oil_waste_entry = tk.Spinbox(self.config_page, textvariable=self.oil_waste_var, width=3)
@@ -175,6 +193,9 @@ class Main:
         self.cerberus_oil_pump_var = tk.IntVar()
         self.cerberus_oil_waste_var = tk.IntVar()
         self.cerberus_oil_insertpurge_var = tk.IntVar()
+        self.cerberus_oil_pump_var.set(3)
+        self.cerberus_oil_waste_var.set(2)
+        self.cerberus_oil_insertpurge_var.set(4)
 
         self.cerberus_oil_pump_entry = tk.Spinbox(self.config_page, textvariable=self.cerberus_oil_pump_var, width=3)
         self.cerberus_oil_waste_entry = tk.Spinbox(self.config_page, textvariable=self.cerberus_oil_waste_var, width=3)
@@ -234,7 +255,9 @@ class Main:
         self.queue_busy = False
         self.listen_run_flag = threading.Event()
         self.listen_run_flag.set()
+        self.start_control_thread()
         self.start_manual_thread()
+
 
     def draw_static(self):
         """Define the geometry of the frames and objects."""
@@ -341,12 +364,12 @@ class Main:
         # self.refresh_com_list()
         # Create the default instruments
         self.add_pump_set_buttons(name="Top Pump")  # Pump 1
-        self.add_pump_set_buttons(name="Bottom Pump")  # Pump 2
-        self.add_rheodyne_set_buttons(name="Loading")  # Loading valve 2
-        self.add_rheodyne_set_buttons(name="Oil")  # Oil Valve
+        self.add_pump_set_buttons(name="Bottom Pump", address=1)  # Pump 2
+        self.add_rheodyne_set_buttons(name="Loading", address=14)  # Loading valve 2
+        self.add_rheodyne_set_buttons(name="Oil", address=8)  # Oil Valve
         self.AddVICISetButtons(name="Sample")    # Sample Valve
-        self.add_rheodyne_set_buttons(name="Ceberus Loading")  # Cerberus Loading
-        self.add_rheodyne_set_buttons(name="Cerberus Oil")  # Cerberus Oil
+        self.add_rheodyne_set_buttons(name="Ceberus Loading", address=24)  # Cerberus Loading
+        self.add_rheodyne_set_buttons(name="Cerberus Oil", address=20)  # Cerberus Oil
         self.AddVICISetButtons(name="Ligand")     # Cerberus Sample
         self.add_rheodyne_set_buttons(name="Purge")   # Purge
         # done creating
@@ -358,7 +381,7 @@ class Main:
         self.oil_valve = self.instruments[3]
         self.sample_valve = self.instruments[4]
 
-        self.ceberus_loading_valve = self.instruments[5]
+        self.cerberus_loading_valve = self.instruments[5]
         self.cerberus_oil_valve = self.instruments[6]
         self.ligand_valve = self.instruments[7]
 
@@ -378,6 +401,12 @@ class Main:
 
     def stop_instruments(self):
         SAXSDrivers.InstrumentTerminateFunction(self.instruments)
+
+    def start_control_thread(self):
+        """ Creates the thread for running instruments separate from auto thread"""
+        control_thread = solocomm.ControlThread(self)
+        control_thread.setDaemon(True)
+        control_thread.start()
 
     def start_manual_thread(self):
         """ Creates the thread for running instruments separate from auto thread"""
@@ -439,6 +468,8 @@ class Main:
 
     def clean_only_command(self):
         """Clean the buffer and sample loops."""
+        print("Trying to do things")
+        self.queue.put((self.python_logger.info, "Starting Cleaning"))
         self.clean_loop(0)
         self.clean_loop(1)
 
@@ -633,6 +664,9 @@ class Main:
             self.queue.put((self.set_insert_sheath_purge, False))
             pass
 
+    def toggle_buttons(self):
+        print("toggled")
+        
     def play_done_sound(self):
         possible_songs = [
             [(392, 300),(494, 300),(587, 300),(740, 300),(783, 600)], # major 7 arpeggio
