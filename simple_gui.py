@@ -66,7 +66,6 @@ class Main:
         self.exit_button = tk.Button(self.main_window, text='X', command=self.exit_)
         self.stop_button = tk.Button(self.main_window, text='STOP', command=self.stop, fg='red', font='Arial 16 bold')
 
-
         # Main Structures
         self.core = ttk.Notebook(self.main_window, width=core_width, height=core_height)
         self.auto_page = tk.Frame(self.core, bg=self.gui_bg_color)
@@ -83,6 +82,7 @@ class Main:
         auto_button_half_font = 'Arial 14 bold'
         auto_button_width = 14
         auto_color = "white"
+        self.running_pos = ""
         self.auto_flowrate_variable = tk.DoubleVar()
         self.run_buffer = tk.Button(self.auto_page, text="Run Buffer", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.run_buffer_command)  # Maybe sets flowpath but doesnt start pumps?
         self.run_sample = tk.Button(self.auto_page, text="Run Sample", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.run_sample_command)  # ""
@@ -428,6 +428,8 @@ class Main:
         print("THANK Y'ALL FOR COMING! A LA PROCHAINE !")
         self.main_window.destroy()
 
+
+
     def cerberus_clean_and_refill_command(self, vol_flag=True):
         if vol_flag:
             vol=self.cerberus_volume.get()/1000
@@ -551,17 +553,36 @@ class Main:
         self.run_pumps.config(bg=bgcolor, text=pump_text)
         self.pumps_running_bool = not self.pumps_running_bool
 
+
+
     def run_buffer_command(self):
+        self.queue.put((self.loading_valve.switchvalve, self.loading_cell_var.get()))
+        self.queue.put((self.oil_valve.switchvalve, self.oil_pump_var.get()))
+        self.queue.put((self.sample_valve.switchvalve, 1))
+        self.queue.put((self.cerberus_loading_valve.switchvalve, self.cerberus_loading_cell_var.get()))
+        self.queue.put((self.cerberus_oil_valve.switchvalve, self.cerberus_oil_pump_var.get()))
+        self.queue.put((self.ligand_valve.switchvalve, 1))
+        self.queue.put(self.toggle_to_buffer)
         # change valve possitions
-        self.run_buffer.config(bg="green", fg="white")
-        self.run_sample.config(bg="white", fg="black")
-        self.remaining_buffer_vol_var.set(self.remaining_buffer_vol_var.get()+1)
+        def toggle_to_buffer(self):
+            self.run_buffer.config(bg="green", fg="white")
+            self.run_sample.config(bg="white", fg="black")
+            self.remaining_buffer_vol_var.set(self.remaining_buffer_vol_var.get()+1)
 
     def run_sample_command(self):
+        self.queue.put((self.loading_valve.switchvalve, self.loading_cell_var.get()))
+        self.queue.put((self.oil_valve.switchvalve, self.oil_pump_var.get()))
+        self.queue.put((self.sample_valve.switchvalve, 1))
+        self.queue.put((self.cerberus_loading_valve.switchvalve, self.cerberus_loading_cell_var.get()))
+        self.queue.put((self.cerberus_oil_valve.switchvalve, self.cerberus_oil_pump_var.get()))
+        self.queue.put((self.ligand_valve.switchvalve, 1))
+        self.queue.put(self.toggle_to_sample)
+
         # change valve possitions
-        self.run_sample.config(bg="green", fg="white")
-        self.run_buffer.config(bg="white", fg="black")
-        self.remaining_sample_vol_var.set(self.remaining_sample_vol_var.get()+1)
+        def toggle_to_sample(self):
+            self.run_sample.config(bg="green", fg="white")
+            self.run_buffer.config(bg="white", fg="black")
+            self.remaining_sample_vol_var.set(self.remaining_sample_vol_var.get()+1)
 
     def unset_purge(self):
         self.purge_valve.switchvalve(self.purge_running_pos.get())
@@ -666,7 +687,7 @@ class Main:
 
     def toggle_buttons(self):
         print("toggled")
-        
+
     def play_done_sound(self):
         possible_songs = [
             [(392, 300),(494, 300),(587, 300),(740, 300),(783, 600)], # major 7 arpeggio
