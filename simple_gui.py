@@ -95,7 +95,7 @@ class Main:
         self.remaining_buffer_vol = tk.Label(self.auto_page, font=auto_button_font, textvariable=self.remaining_buffer_vol_var)
         self.remaining_sample_vol = tk.Label(self.auto_page, font=auto_button_font, textvariable=self.remaining_sample_vol_var)
         self.clean_button = tk.Button(self.auto_page, text='Clean/Refill', font=auto_button_font, width=auto_button_width*2+2, height=3, bg=auto_color, command=self.clean_only_command)
-        self.set_main_flowrate = tk.Button(self.auto_page, text='Set Flowrate', font=auto_button_font, width=auto_button_width, height=3, bg=auto_color)
+        self.set_main_flowrate = tk.Button(self.auto_page, text='Set Flowrate', font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.set_auto_flowrate_command)
         self.main_flowrate = tk.Spinbox(self.auto_page, from_=0, to_=100, textvariable=self.auto_flowrate_variable, font='Arial 30 bold', width = 10, bg=auto_color, justify="right")
         self.pumps_running_bool = False
         self.load_buffer_button = tk.Button(self.auto_page, text="Load Buffer", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.load_buffer_command)
@@ -397,7 +397,7 @@ class Main:
 
     def stop(self):
         """Stop all running widgets."""
-        self.solo_controller.abortProcess = True
+        self.control_thread.abortProcess = True
         self.stop_instruments()
 
     def stop_instruments(self):
@@ -536,10 +536,12 @@ class Main:
         self.queue.put((self.cerberus_oil_valve.switchvalve, self.cerberus_oil_waste_var.get()))
         self.queue.put((self.sample_valve.switchvalve, loop))
 
+        """
         self.queue.put((self.set_insert_purge, False))
         self.queue.put((self.set_insert_sheath_purge, False))
         self.queue.put(self.unset_insert_purge)
         self.queue.put(self.unset_insert_sheath_purge)
+        """
 
     def load_buffer_command(self):
         self.load_loop(0)
@@ -627,6 +629,12 @@ class Main:
         self.run_buffer.config(bg="white", fg="black")
         self.remaining_sample_vol_var.set(self.remaining_sample_vol_var.get()+1)
         self.running_pos = "sample"
+
+
+    def set_auto_flowrate_command(self):
+        rt = self.auto_flowrate_variable.get()
+        self.queue.put((self.pump.set_infuse_rate, rt))
+        self.queue.put((self.cerberus_pump.set_infuse_rate, rt))
 
     def unset_purge(self):
         self.purge_valve.switchvalve(self.purge_running_pos.get())
@@ -729,8 +737,6 @@ class Main:
             self.queue.put((self.set_insert_sheath_purge, False))
             pass
 
-    def toggle_buttons(self):
-        print("toggled")
 
     def play_done_sound(self):
         possible_songs = [
