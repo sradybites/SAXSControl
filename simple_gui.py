@@ -421,9 +421,9 @@ class Main:
 
     def start_control_thread(self):
         """ Creates the thread for running instruments separate from auto thread"""
-        control_thread = solocomm.ControlThread(self)
-        control_thread.setDaemon(True)
-        control_thread.start()
+        self.control_thread = solocomm.ControlThread(self)
+        self.control_thread.setDaemon(True)
+        self.control_thread.start()
 
     def start_manual_thread(self):
         """ Creates the thread for running instruments separate from auto thread"""
@@ -753,6 +753,8 @@ class Main:
             self.queue.put((self.set_insert_sheath_purge, False))
             pass
 
+    def toggle_buttons(self):
+        print("toggles")
 
     def play_done_sound(self):
         possible_songs = [
