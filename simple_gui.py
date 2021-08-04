@@ -220,7 +220,17 @@ class Main:
         self.air_time = tk.IntVar(value=0)
         self.air_time_box = tk.Spinbox(self.config_page, from_=0, to=1000, width=3, textvariable=self.air_time)
 
-        #loop Volumes
+        # Loop Volumes
+        self.buffer_loop_vol_var = tk.DoubleVar()
+        self.sample_loop_vol_var = tk.DoubleVar()
+        self.buffer_loop_vol_var.set(0.8)
+        self.sample_loop_vol_var.set(0.4)
+
+        self.buffer_loop_label = tk.Label(self.config_page, text="Buffer loop Vol (ml): ", bg=self.label_bg_color)
+        self.sample_loop_label = tk.Label(self.config_page, text="Sample loop Vol (ml): ", bg=self.label_bg_color)
+
+        self.buffer_loop_entry = tk.Spinbox(self.config_page, from_=0, to=10, increment=0.01, width=4, textvariable=self.buffer_loop_vol_var)
+        self.sample_loop_entry = tk.Spinbox(self.config_page, from_=0, to=10, increment=0.01, width=4, textvariable=self.sample_loop_vol_var)
         # Make Instrument
         self.AvailablePorts = []
         self.controller = SAXSDrivers.SAXSController(timeout=0.1)
@@ -353,6 +363,12 @@ class Main:
         self.water_time_box.grid(row=valverow, column=5, sticky=tk.W+tk.E+tk.N+tk.S)
         self.air_time_label.grid(row=valverow, column=6, sticky=tk.W+tk.E+tk.N+tk.S)
         self.air_time_box.grid(row=valverow, column=7, sticky=tk.W+tk.E+tk.N+tk.S)
+        valverow=10
+        self.buffer_loop_label.grid(row=valverow, column=0, sticky=tk.W+tk.N)
+        self.buffer_loop_entry.grid(row=valverow, column=1)
+        valverow=11
+        self.sample_loop_label.grid(row=valverow, column=0, sticky=tk.W+tk.N)
+        self.sample_loop_entry.grid(row=valverow, column=1)
 
         # Setup page
         self.refresh_com_ports.grid(row=0, column=0)

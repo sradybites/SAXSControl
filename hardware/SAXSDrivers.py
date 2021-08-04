@@ -1047,7 +1047,7 @@ class VICI:
                 raise ValueError
             if not self.serialobject.is_open:
                 self.serialobject.open()
-            commandtosend = self.ControllerKey+"GO"+position+"\r"
+            commandtosend = self.ControllerKey+self.address+"GO"+position+"\r"
             while self.serialobject.in_waiting > 0:  # Cler Buffer
                 self.serialobject.readline()
             self.serialobject.write(commandtosend.encode())
@@ -1069,7 +1069,7 @@ class VICI:
 
         if not self.serialobject.is_open:
             self.serialobject.open()
-        commandtosend = self.ControllerKey+"CP"+"\r"
+        commandtosend = self.ControllerKey+self.address+"CP"+"\r"
         self.serialobject.write(commandtosend.encode())
 
         self.logger.info(self.name+" Position Query ")
