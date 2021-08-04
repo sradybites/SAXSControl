@@ -560,35 +560,41 @@ class Main:
 
         self.queue.put(self.toggle_running)
 
-        def start_both_pumps(self, vol, rt):
-            # Set Pump settings
-            self.queue.put((self.pump.infuse_volume, vol, rt))
-            self.queue.put((self.cerberus_pump.infuse_volume, vol, rt))
-            # Start Pumps
-            self.queue.put(self.pump.start_pump)
-            self.queue.put(self.cerberus_pump.start_pump)
+    def start_both_pumps(self, vol, rt):
+        # Set Pump settings
+        self.queue.put((self.pump.infuse_volume, vol, rt))
+        self.queue.put((self.cerberus_pump.infuse_volume, vol, rt))
+        # Start Pumps
+        self.queue.put(self.pump.start_pump)
+        self.queue.put(self.cerberus_pump.start_pump)
 
-        def stop_both_pumps(self):
-            self.queue.put(self.pump.stop) #this should stop all of them?
-            self.queue.put(self.update_delivered_vol)
+    def stop_both_pumps(self):
+        self.queue.put(self.pump.stop) #this should stop all of them?
+        self.queue.put(self.update_delivered_vol)
 
-            def update_delivered_vol(self):
-                pump1vol = float(self.pump.get_delivered_volume())
-                pump2vol = float(self.cerberus_pump.get_delivered_volume())
-                if pump1vol>pump2vol:
-                    self.remaining_buffer.set(pump1vol)
-                else:
-                    self.remaining_buffer.set(pump2vol)
+    def update_delivered_vol(self):
+        pump1vol = float(self.pump.get_delivered_volume())
+        pump2vol = float(self.cerberus_pump.get_delivered_volume())
+        if pump1vol>pump2vol:
+            if self.running_pos == "buffer":
+                self.remaining_buffer_vol_var.set(pump1vol)
+            elif self.running_pos == "sample":
+                self.remaining_sample_vol_var.set(pump1vol)
+        else:
+            if self.running_pos == "buffer":
+                self.remaining_buffer_vol_var.set(pump2vol)
+            elif self.running_pos == "sample":
+                self.remaining_sample_vol_var.set(pump2vol)
 
-        def toggle_running(self):
-            if not self.pumps_running_bool:
-                bgcolor = "green"
-                pump_text = "Running"
-            else:
-                bgcolor = "red"
-                pump_text = "Stopped"
-            self.run_pumps.config(bg=bgcolor, text=pump_text)
-            self.pumps_running_bool = not self.pumps_running_bool
+    def toggle_running(self):
+        if not self.pumps_running_bool:
+            bgcolor = "green"
+            pump_text = "Running"
+        else:
+            bgcolor = "red"
+            pump_text = "Stopped"
+        self.run_pumps.config(bg=bgcolor, text=pump_text)
+        self.pumps_running_bool = not self.pumps_running_bool
 
 
     def run_buffer_command(self):
@@ -600,25 +606,27 @@ class Main:
         self.queue.put((self.ligand_valve.switchvalve, 1))
         self.queue.put(self.toggle_to_buffer)
         # change valve possitions
-        def toggle_to_buffer(self):
-            self.run_buffer.config(bg="green", fg="white")
-            self.run_sample.config(bg="white", fg="black")
-            self.remaining_buffer_vol_var.set(self.remaining_buffer_vol_var.get()+1)
+    def toggle_to_buffer(self):
+        self.run_buffer.config(bg="green", fg="white")
+        self.run_sample.config(bg="white", fg="black")
+        self.remaining_buffer_vol_var.set(self.remaining_buffer_vol_var.get()+1)
+        self.running_pos = "buffer"
 
     def run_sample_command(self):
         self.queue.put((self.loading_valve.switchvalve, self.loading_cell_var.get()))
         self.queue.put((self.oil_valve.switchvalve, self.oil_pump_var.get()))
-        self.queue.put((self.sample_valve.switchvalve, 1))
+        self.queue.put((self.sample_valve.switchvalve, 0))
         self.queue.put((self.cerberus_loading_valve.switchvalve, self.cerberus_loading_cell_var.get()))
         self.queue.put((self.cerberus_oil_valve.switchvalve, self.cerberus_oil_pump_var.get()))
-        self.queue.put((self.ligand_valve.switchvalve, 1))
+        self.queue.put((self.ligand_valve.switchvalve, 0))
         self.queue.put(self.toggle_to_sample)
 
         # change valve possitions
-        def toggle_to_sample(self):
-            self.run_sample.config(bg="green", fg="white")
-            self.run_buffer.config(bg="white", fg="black")
-            self.remaining_sample_vol_var.set(self.remaining_sample_vol_var.get()+1)
+    def toggle_to_sample(self):
+        self.run_sample.config(bg="green", fg="white")
+        self.run_buffer.config(bg="white", fg="black")
+        self.remaining_sample_vol_var.set(self.remaining_sample_vol_var.get()+1)
+        self.running_pos = "sample"
 
     def unset_purge(self):
         self.purge_valve.switchvalve(self.purge_running_pos.get())
