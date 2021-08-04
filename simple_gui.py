@@ -220,6 +220,7 @@ class Main:
         self.air_time = tk.IntVar(value=0)
         self.air_time_box = tk.Spinbox(self.config_page, from_=0, to=1000, width=3, textvariable=self.air_time)
 
+        #loop Volumes
         # Make Instrument
         self.AvailablePorts = []
         self.controller = SAXSDrivers.SAXSController(timeout=0.1)
@@ -545,14 +546,49 @@ class Main:
 
     def run_pumps_button_command(self):
         if not self.pumps_running_bool:
-            bgcolor = "green"
-            pump_text = "Running"
+            if self.running_pos == "sample":
+                self.run_sample_command()
+                self.start_both_pumps(0.38, self.auto_flowrate_variable.get())
+            elif self.running_pos== "buffer":
+                self.run_buffer_command()
+                self.start_both_pumps(0.78, self.auto_flowrate_variable.get())
+            else:
+                self.python_logger.info("No running path set. Command Ignored.")
+                return
         else:
-            bgcolor = "red"
-            pump_text = "Stopped"
-        self.run_pumps.config(bg=bgcolor, text=pump_text)
-        self.pumps_running_bool = not self.pumps_running_bool
+            self.stop_both_pumps()
 
+        self.queue.put(self.toggle_running)
+
+        def start_both_pumps(self, vol, rt):
+            # Set Pump settings
+            self.queue.put((self.pump.infuse_volume, vol, rt))
+            self.queue.put((self.cerberus_pump.infuse_volume, vol, rt))
+            # Start Pumps
+            self.queue.put(self.pump.start_pump)
+            self.queue.put(self.cerberus_pump.start_pump)
+
+        def stop_both_pumps(self):
+            self.queue.put(self.pump.stop) #this should stop all of them?
+            self.queue.put(self.update_delivered_vol)
+
+            def update_delivered_vol(self):
+                pump1vol = float(self.pump.get_delivered_volume())
+                pump2vol = float(self.cerberus_pump.get_delivered_volume())
+                if pump1vol>pump2vol:
+                    self.remaining_buffer.set(pump1vol)
+                else:
+                    self.remaining_buffer.set(pump2vol)
+
+        def toggle_running(self):
+            if not self.pumps_running_bool:
+                bgcolor = "green"
+                pump_text = "Running"
+            else:
+                bgcolor = "red"
+                pump_text = "Stopped"
+            self.run_pumps.config(bg=bgcolor, text=pump_text)
+            self.pumps_running_bool = not self.pumps_running_bool
 
 
     def run_buffer_command(self):

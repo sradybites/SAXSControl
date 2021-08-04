@@ -544,7 +544,7 @@ class HPump:
         time.sleep(0.1)
         self.set_infuse_rate(rate)
         time.sleep(0.1)
-        self.start_pump()
+        #self.start_pump()
         # self.wait_until_stopped(2*volume*1000/rate)  # wait for it to stop
 
     def refill_volume(self, volume, rate):
