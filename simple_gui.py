@@ -595,14 +595,14 @@ class Main:
         pump2vol = float(self.cerberus_pump.get_delivered_volume())
         if pump1vol>pump2vol:
             if self.running_pos == "buffer":
-                self.remaining_buffer_vol_var.set(self.remaining_buffer_vol_var.get()-pump1vol)
+                self.remaining_buffer_vol_var.set(round(self.remaining_buffer_vol_var.get()-pump1vol,5))
             elif self.running_pos == "sample":
-                self.remaining_sample_vol_var.set(self.remaining_sample_vol_var.get()-pump1vol)
+                self.remaining_sample_vol_var.set(round(self.remaining_sample_vol_var.get()-pump1vol,5))
         else:
             if self.running_pos == "buffer":
-                self.remaining_buffer_vol_var.set(self.remaining_buffer_vol_var.get()-pump2vol)
+                self.remaining_buffer_vol_var.set(round(self.remaining_buffer_vol_var.get()-pump2vol,5))
             elif self.running_pos == "sample":
-                self.remaining_sample_vol_var.set(self.remaining_sample_vol_var.get()-pump2vol)
+                self.remaining_sample_vol_var.set(round(self.remaining_sample_vol_var.get()-pump2vol,5))
 
     def reset_delivered_vol(self):
         self.remaining_buffer_vol_var.set(self.buffer_loop_vol_var.get())
