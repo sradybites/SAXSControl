@@ -997,7 +997,7 @@ class Rheodyne:
 class VICI:
     """Class to control a VICI valve."""
 
-    def __init__(self, name="VICI", address="", enabled=False, pc_connect=True, position=0, logger=[], hardware_configuration="", lock=None):
+    def __init__(self, name="VICI", address="", enabled=False, pc_connect=True, position=0, logger=[], hardware_configuration="", lock=None, silent=False):
         self.name = name
         self.address = address
         self.enabled = enabled
@@ -1010,6 +1010,7 @@ class VICI:
         self.instrument_type = "VICI"
         self.hardware_configuration = hardware_configuration
         self._lock=lock
+        self.silent = silent
 
     def set_port(self, port):
         if self.serialobject.is_open:
@@ -1052,6 +1053,8 @@ class VICI:
                 self.serialobject.readline()
             self.serialobject.write(commandtosend.encode())
             time.sleep(0.2)
+            if self.silent:
+                return
             if self.serialobject.in_waiting == 0:  # give extra time
                 time.sleep(0.2)
             while self.serialobject.in_waiting > 0:  # Read in response

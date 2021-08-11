@@ -387,7 +387,7 @@ class Main:
         self.AddVICISetButtons(name="Sample", address="1")    # Sample Valve
         self.add_rheodyne_set_buttons(name="Ceberus Loading", address=24)  # Cerberus Loading
         self.add_rheodyne_set_buttons(name="Cerberus Oil", address=20)  # Cerberus Oil
-        self.AddVICISetButtons(name="Ligand", address="2")     # Cerberus Sample
+        self.AddVICISetButtons(name="Ligand", address="2", silent=True)     # Cerberus Sample
         self.add_rheodyne_set_buttons(name="Purge")   # Purge
         # done creating
         # Now Create main objects to assign these objects
@@ -985,8 +985,8 @@ class Main:
             for y in range(len(self.manual_page_buttons[i])):
                 self.manual_page_buttons[i][y].grid(row=i+1, column=y, sticky=tk.W)
 
-    def AddVICISetButtons(self, name="VICI", hardware="", pc_connect=True, address=""):
-        self.instruments.append(SAXSDrivers.VICI(logger=self.python_logger, name=name, hardware_configuration=hardware, lock=self._lock, pc_connect=pc_connect, address=address))
+    def AddVICISetButtons(self, name="VICI", hardware="", pc_connect=True, address="", silent=False):
+        self.instruments.append(SAXSDrivers.VICI(logger=self.python_logger, name=name, hardware_configuration=hardware, lock=self._lock, pc_connect=pc_connect, address=address, silent=silent))
         instrument_index = len(self.instruments)-1
         newvars = [tk.IntVar(value=-1), tk.StringVar(value=name), tk.StringVar(value=hardware)]
         self.setup_page_variables.append(newvars)
