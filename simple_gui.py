@@ -84,8 +84,8 @@ class Main:
         auto_color = "white"
         self.running_pos = ""
         self.auto_flowrate_variable = tk.DoubleVar()
-        self.run_buffer = tk.Button(self.auto_page, text="Run Buffer", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.run_buffer_command)  # Maybe sets flowpath but doesnt start pumps?
-        self.run_sample = tk.Button(self.auto_page, text="Run Sample", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.run_sample_command)  # ""
+        self.run_buffer = tk.Button(self.auto_page, text="Set Buffer", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.run_buffer_command)  # Maybe sets flowpath but doesnt start pumps?
+        self.run_sample = tk.Button(self.auto_page, text="Set Sample", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.run_sample_command)  # ""
         # self.pause_pump = tk.Button(self.auto_page, text="Pause Pumps", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color)  # This button pauses pumps between switching possitions. Should update infused vol
         self.run_pumps = tk.Button(self.auto_page, text="Run Pumps", font=auto_button_font, width=auto_button_width*2+2, height=3, command=self.run_pumps_button_command, bg="red", fg="white")  # This button is to restart pumps after pause. It needs to check for valve possitions, before starting.
         self.remaining_buffer_vol_var = tk.DoubleVar()
@@ -491,7 +491,7 @@ class Main:
         self.queue.put((self.python_logger.info, "Starting Cleaning"))
         self.clean_loop(0)
         self.clean_loop(1)
-
+        self.queue.put(self.reset_delivered_vol)
         self.queue.put((self.python_logger.info, "Both Loops Cleaned"))
 
     def clean_loop(self, loop):
@@ -566,10 +566,10 @@ class Main:
         if not self.pumps_running_bool:
             if self.running_pos == "sample":
                 self.run_sample_command()
-                self.start_both_pumps(0.38, self.auto_flowrate_variable.get())
+                self.start_both_pumps(self.remaining_sample_vol_var.get(), self.auto_flowrate_variable.get())
             elif self.running_pos== "buffer":
                 self.run_buffer_command()
-                self.start_both_pumps(0.78, self.auto_flowrate_variable.get())
+                self.start_both_pumps(self.remaining_buffer_vol_var.get(), self.auto_flowrate_variable.get())
             else:
                 self.python_logger.info("No running path set. Command Ignored.")
                 return
@@ -595,14 +595,18 @@ class Main:
         pump2vol = float(self.cerberus_pump.get_delivered_volume())
         if pump1vol>pump2vol:
             if self.running_pos == "buffer":
-                self.remaining_buffer_vol_var.set(pump1vol)
+                self.remaining_buffer_vol_var.set(self.remaining_buffer_vol_var.get()-pump1vol)
             elif self.running_pos == "sample":
-                self.remaining_sample_vol_var.set(pump1vol)
+                self.remaining_sample_vol_var.set(self.remaining_sample_vol_var.get()-pump1vol)
         else:
             if self.running_pos == "buffer":
-                self.remaining_buffer_vol_var.set(pump2vol)
+                self.remaining_buffer_vol_var.set(self.remaining_buffer_vol_var.get()-pump2vol)
             elif self.running_pos == "sample":
-                self.remaining_sample_vol_var.set(pump2vol)
+                self.remaining_sample_vol_var.set(self.remaining_sample_vol_var.get()-pump2vol)
+
+    def reset_delivered_vol(self):
+        self.remaining_buffer_vol_var.set(self.buffer_loop_vol_var.get())
+        self.remaining_sample_vol_var.set(self.sample_loop_vol_var.get())
 
     def toggle_running(self):
         if not self.pumps_running_bool:
@@ -627,7 +631,6 @@ class Main:
     def toggle_to_buffer(self):
         self.run_buffer.config(bg="green", fg="white")
         self.run_sample.config(bg="white", fg="black")
-        self.remaining_buffer_vol_var.set(self.remaining_buffer_vol_var.get()+1)
         self.running_pos = "buffer"
 
     def run_sample_command(self):
@@ -643,7 +646,6 @@ class Main:
     def toggle_to_sample(self):
         self.run_sample.config(bg="green", fg="white")
         self.run_buffer.config(bg="white", fg="black")
-        self.remaining_sample_vol_var.set(self.remaining_sample_vol_var.get()+1)
         self.running_pos = "sample"
 
 
