@@ -89,6 +89,8 @@ class Main:
         # self.pause_pump = tk.Button(self.auto_page, text="Pause Pumps", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color)  # This button pauses pumps between switching possitions. Should update infused vol
         self.run_pumps = tk.Button(self.auto_page, text="Run Pumps", font=auto_button_font, width=auto_button_width*2+2, height=3, command=self.run_pumps_button_command, bg="red", fg="white")  # This button is to restart pumps after pause. It needs to check for valve possitions, before starting.
         self.remaining_buffer_vol_var = tk.DoubleVar()
+        self.remaining_buffer_real = 0
+        self.reamiining_sample_real = 0
         self.remaining_sample_vol_var = tk.DoubleVar()
         self.remaining_buffer = tk.Label(self.auto_page, font=auto_button_half_font, text="Remaining Buffer:", bg=auto_color)
         self.remaining_sample = tk.Label(self.auto_page, font=auto_button_half_font, text="Remaining Sample:", bg=auto_color)
@@ -268,6 +270,7 @@ class Main:
         self.listen_run_flag.set()
         self.start_control_thread()
         self.start_manual_thread()
+        self.volume_count_down()
 
 
     def draw_static(self):
@@ -595,18 +598,24 @@ class Main:
         pump2vol = float(self.cerberus_pump.get_delivered_volume())
         if pump1vol>pump2vol:
             if self.running_pos == "buffer":
-                self.remaining_buffer_vol_var.set(round(self.remaining_buffer_vol_var.get()-pump1vol,5))
+                self.remaining_buffer_real = round(self.remaining_buffer_real-pump1vol,5)
+                self.remaining_buffer_vol_var.set(self.remaining_buffer_real)
             elif self.running_pos == "sample":
-                self.remaining_sample_vol_var.set(round(self.remaining_sample_vol_var.get()-pump1vol,5))
+                self.remaining_sample_real = round(self.remaining_sample_real-pump1vol,5)
+                self.remaining_sample_vol_var.set(self.remaining_sample_real)
         else:
             if self.running_pos == "buffer":
-                self.remaining_buffer_vol_var.set(round(self.remaining_buffer_vol_var.get()-pump2vol,5))
+                self.remaining_buffer_real = self.remaining_buffer_real-pump2vol
+                self.remaining_buffer_vol_var.set(self.remaining_buffer_real)
             elif self.running_pos == "sample":
-                self.remaining_sample_vol_var.set(round(self.remaining_sample_vol_var.get()-pump2vol,5))
+                self.remaining_sample_real = self.remaining_sample_real-pump2vol
+                self.remaining_sample_vol_var.set(self.remaining_sample_real)
 
     def reset_delivered_vol(self):
-        self.remaining_buffer_vol_var.set(self.buffer_loop_vol_var.get())
-        self.remaining_sample_vol_var.set(self.sample_loop_vol_var.get())
+        self.remaining_buffer_real = self.buffer_loop_vol_var.get()
+        self.remaining_sample_real = self.sample_loop_vol_var.get()
+        self.remaining_buffer_vol_var.set(self.remaining_buffer_real)
+        self.remaining_sample_vol_var.set(self.remaining_sample_real)
 
     def toggle_running(self):
         if not self.pumps_running_bool:
@@ -648,7 +657,6 @@ class Main:
         self.run_buffer.config(bg="white", fg="black")
         self.running_pos = "sample"
 
-
     def set_auto_flowrate_command(self):
         rt = self.auto_flowrate_variable.get()
         self.queue.put((self.pump.set_infuse_rate, rt))
@@ -658,6 +666,7 @@ class Main:
         self.purge_valve.switchvalve(self.purge_running_pos.get())
         self.purge_button.configure(bg="white smoke")
         self.purge_soap_button.configure(bg="white smoke")
+
         self.purge_dry_button.configure(bg="white smoke")
 
     def purge_command(self):
@@ -756,7 +765,14 @@ class Main:
             pass
 
     def toggle_buttons(self):
-        print("toggles")
+        buttons = (self.run_buffer, self.run_sample, self.load_buffer_button, self.load_sample_button, self.clean_button)
+
+        if self.queue_busy or self.pumps_running_bool:
+            for button in buttons:
+                button['state'] = 'disabled'
+        else:
+            for button in buttons:
+                button['state'] = 'normal'
 
     def play_done_sound(self):
         possible_songs = [
@@ -1028,6 +1044,19 @@ class Main:
         for i in range(len(self.manual_page_buttons)):
             for y in range(len(self.manual_page_buttons[i])):
                 self.manual_page_buttons[i][y].grid(row=i+1, column=y)
+
+    def volume_count_down(self):
+        if self.pumps_running_bool:
+            self.after(1000, lower_vol)
+        else:
+            pass
+
+        def lower_vol(self):
+            if self.running_pos == "buffer":
+                self.remaining_buffer_vol_var.set(round(self.remaining_buffer_vol_var.get()-self.auto_flowrate_variable.get()/60.0,5))
+            elif self.running_pos == "sample":
+                self.remaining_sample_vol_var.set(round(self.remaining_sample_vol_var.get()-self.auto_flowrate_variable.get()/60.0,5))
+
 
 if __name__ == "__main__":
     window = tk.Tk()
