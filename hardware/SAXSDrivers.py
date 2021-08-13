@@ -452,8 +452,11 @@ class HPump:
                 self.controller.write(("-"+self.address+'TGT'+volstr+"\n\r").encode())
 
             time.sleep(0.2)
-            self.logger.info(self.name+" Target Vol is "+str(self.check_target_volume())+" ml")
-
+            if vol==self.check_target_volume():
+                self.logger.info(self.name+" Target Vol is "+str(vol)+" ml")
+            else:
+                self.logger.info("Error setting refill rate for "+self.name)
+                raise RuntimeError
     def is_running(self, resource=pumpserial):
         with self._lock:
             running = False
