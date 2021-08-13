@@ -90,7 +90,7 @@ class Main:
         self.run_pumps = tk.Button(self.auto_page, text="Run Pumps", font=auto_button_font, width=auto_button_width*2+2, height=3, command=self.run_pumps_button_command, bg="red", fg="white")  # This button is to restart pumps after pause. It needs to check for valve possitions, before starting.
         self.remaining_buffer_vol_var = tk.DoubleVar()
         self.remaining_buffer_real = 0
-        self.reamiining_sample_real = 0
+        self.remaining_sample_real = 0
         self.remaining_sample_vol_var = tk.DoubleVar()
         self.remaining_buffer = tk.Label(self.auto_page, font=auto_button_half_font, text="Remaining Buffer:", bg=auto_color)
         self.remaining_sample = tk.Label(self.auto_page, font=auto_button_half_font, text="Remaining Sample:", bg=auto_color)
@@ -270,7 +270,6 @@ class Main:
         self.listen_run_flag.set()
         self.start_control_thread()
         self.start_manual_thread()
-        self.volume_count_down()
 
 
     def draw_static(self):
@@ -490,10 +489,10 @@ class Main:
 
     def clean_only_command(self):
         """Clean the buffer and sample loops."""
-        print("Trying to do things")
         self.queue.put((self.python_logger.info, "Starting Cleaning"))
         self.clean_loop(0)
         self.clean_loop(1)
+        self.load_buffer_command()
         self.queue.put(self.reset_delivered_vol)
         self.queue.put((self.python_logger.info, "Both Loops Cleaned"))
 
@@ -569,10 +568,10 @@ class Main:
         if not self.pumps_running_bool:
             if self.running_pos == "sample":
                 self.run_sample_command()
-                self.start_both_pumps(self.remaining_sample_vol_var.get(), self.auto_flowrate_variable.get())
+                self.start_both_pumps(self.remaining_sample_real, self.auto_flowrate_variable.get())
             elif self.running_pos== "buffer":
                 self.run_buffer_command()
-                self.start_both_pumps(self.remaining_buffer_vol_var.get(), self.auto_flowrate_variable.get())
+                self.start_both_pumps(self.remaining_buffer_real, self.auto_flowrate_variable.get())
             else:
                 self.python_logger.info("No running path set. Command Ignored.")
                 return
@@ -589,9 +588,9 @@ class Main:
         self.queue.put(self.pump.start_pump)
         self.queue.put(self.cerberus_pump.start_pump)
 
+
     def stop_both_pumps(self):
         self.queue.put(self.pump.stop) #this should stop all of them?
-        self.queue.put(self.update_delivered_vol)
 
     def update_delivered_vol(self):
         pump1vol = float(self.pump.get_delivered_volume())
@@ -605,10 +604,10 @@ class Main:
                 self.remaining_sample_vol_var.set(self.remaining_sample_real)
         else:
             if self.running_pos == "buffer":
-                self.remaining_buffer_real = self.remaining_buffer_real-pump2vol
+                self.remaining_buffer_real = round(self.remaining_buffer_real-pump2vol,5)
                 self.remaining_buffer_vol_var.set(self.remaining_buffer_real)
             elif self.running_pos == "sample":
-                self.remaining_sample_real = self.remaining_sample_real-pump2vol
+                self.remaining_sample_real = round(self.remaining_sample_real-pump2vol,5)
                 self.remaining_sample_vol_var.set(self.remaining_sample_real)
 
     def reset_delivered_vol(self):
@@ -618,14 +617,17 @@ class Main:
         self.remaining_sample_vol_var.set(self.remaining_sample_real)
 
     def toggle_running(self):
-        if not self.pumps_running_bool:
+        self.pumps_running_bool = not self.pumps_running_bool
+        if self.pumps_running_bool:
             bgcolor = "green"
             pump_text = "Running"
+            self.volume_count_down()
         else:
             bgcolor = "red"
             pump_text = "Stopped"
+            self.update_delivered_vol()
         self.run_pumps.config(bg=bgcolor, text=pump_text)
-        self.pumps_running_bool = not self.pumps_running_bool
+
 
 
     def run_buffer_command(self):
@@ -1046,16 +1048,18 @@ class Main:
                 self.manual_page_buttons[i][y].grid(row=i+1, column=y)
 
     def volume_count_down(self):
+
         if self.pumps_running_bool:
-            self.after(1000, lower_vol)
+            self.lower_vol()
+            self.main_window.after(1000, self.volume_count_down)
         else:
             pass
 
-        def lower_vol(self):
-            if self.running_pos == "buffer":
-                self.remaining_buffer_vol_var.set(round(self.remaining_buffer_vol_var.get()-self.auto_flowrate_variable.get()/60.0,5))
-            elif self.running_pos == "sample":
-                self.remaining_sample_vol_var.set(round(self.remaining_sample_vol_var.get()-self.auto_flowrate_variable.get()/60.0,5))
+    def lower_vol(self):
+        if self.running_pos == "buffer":
+            self.remaining_buffer_vol_var.set(round(self.remaining_buffer_vol_var.get()-self.auto_flowrate_variable.get()/60000.0,5))
+        elif self.running_pos == "sample":
+            self.remaining_sample_vol_var.set(round(self.remaining_sample_vol_var.get()-self.auto_flowrate_variable.get()/60000.0,5))
 
 
 if __name__ == "__main__":
