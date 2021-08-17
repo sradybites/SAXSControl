@@ -84,8 +84,6 @@ class Main:
         auto_color = "white"
         self.running_pos = ""
         self.auto_flowrate_variable = tk.DoubleVar()
-        self.auto_flowrate = 30
-        self.auto_flowrate_variable.set(self.auto_flowrate)
         self.run_buffer = tk.Button(self.auto_page, text="Set Buffer", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.run_buffer_command)  # Maybe sets flowpath but doesnt start pumps?
         self.run_sample = tk.Button(self.auto_page, text="Set Sample", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.run_sample_command)  # ""
         # self.pause_pump = tk.Button(self.auto_page, text="Pause Pumps", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color)  # This button pauses pumps between switching possitions. Should update infused vol
@@ -532,16 +530,20 @@ class Main:
         self.queue.put((self.loading_valve.switchvalve, self.loading_Water_var.get()))
         self.queue.put((time.sleep, self.water_time.get()))
 
-        self.queue.put((self.python_logger.info, "Air drying loops"))
+        self.queue.put((self.python_logger.info, "Air drying 1"))
         self.queue.put((self.cerberus_oil_valve.switchvalve, self.cerberus_oil_waste_var.get()))
         self.queue.put((self.ligand_valve.switchvalve, loop))
         self.queue.put((self.cerberus_loading_valve.switchvalve, self.cerberus_loading_Air_var.get()))
+        self.queue.put((time.sleep, self.air_time.get()))
+        self.queue.put((self.cerberus_loading_valve.switchvalve, self.cerberus_loading_load_var.get()))
+
+        self.queue.put((self.python_logger.info, "Air drying 2"))
         self.queue.put((self.oil_valve.switchvalve, self.oil_waste_var.get()))
         self.queue.put((self.sample_valve.switchvalve, loop))
         self.queue.put((self.loading_valve.switchvalve, self.loading_Water_var.get()))
         self.queue.put((time.sleep, self.air_time.get()))
         self.queue.put((self.loading_valve.switchvalve, self.loading_load_var.get()))
-        self.queue.put((self.cerberus_loading_valve.switchvalve, self.cerberus_loading_load_var.get()))
+
 
         self.queue.put((self.python_logger.info, "Done Cleaning Loop: "+str(loop+1)))
 
@@ -570,10 +572,10 @@ class Main:
         if not self.pumps_running_bool:
             if self.running_pos == "sample":
                 self.run_sample_command()
-                self.start_both_pumps(self.remaining_sample_real, self.auto_flowrate)
+                self.start_both_pumps(self.remaining_sample_real, self.auto_flowrate_variable.get())
             elif self.running_pos== "buffer":
                 self.run_buffer_command()
-                self.start_both_pumps(self.remaining_buffer_real, self.auto_flowrate)
+                self.start_both_pumps(self.remaining_buffer_real, self.auto_flowrate_variable.get())
             else:
                 self.python_logger.info("No running path set. Command Ignored.")
                 return
@@ -663,7 +665,6 @@ class Main:
 
     def set_auto_flowrate_command(self):
         rt = self.auto_flowrate_variable.get()
-        self.auto_flowrate = rt
         self.queue.put((self.pump.set_infuse_rate, rt))
         self.queue.put((self.cerberus_pump.set_infuse_rate, rt))
 
@@ -1060,9 +1061,9 @@ class Main:
 
     def lower_vol(self):
         if self.running_pos == "buffer":
-            self.remaining_buffer_vol_var.set(round(self.remaining_buffer_vol_var.get()-self.auto_flowrate/60000.0,5))
+            self.remaining_buffer_vol_var.set(round(self.remaining_buffer_vol_var.get()-self.auto_flowrate_variable.get()/60000.0,5))
         elif self.running_pos == "sample":
-            self.remaining_sample_vol_var.set(round(self.remaining_sample_vol_var.get()-self.auto_flowrate/60000.0,5))
+            self.remaining_sample_vol_var.set(round(self.remaining_sample_vol_var.get()-self.auto_flowrate_variable.get()/60000.0,5))
 
 
 if __name__ == "__main__":
