@@ -524,6 +524,7 @@ class Main:
         self.queue.put((self.python_logger.info, "Flushing Water"))
         self.queue.put((self.cerberus_oil_valve.switchvalve, self.cerberus_oil_waste_var.get()))
         self.queue.put((self.ligand_valve.switchvalve, loop))
+
         self.queue.put((self.cerberus_loading_valve.switchvalve, self.cerberus_loading_Water_var.get()))
         self.queue.put((self.oil_valve.switchvalve, self.oil_waste_var.get()))
         self.queue.put((self.sample_valve.switchvalve, loop))
@@ -540,7 +541,7 @@ class Main:
         self.queue.put((self.python_logger.info, "Air drying 2"))
         self.queue.put((self.oil_valve.switchvalve, self.oil_waste_var.get()))
         self.queue.put((self.sample_valve.switchvalve, loop))
-        self.queue.put((self.loading_valve.switchvalve, self.loading_Water_var.get()))
+        self.queue.put((self.loading_valve.switchvalve, self.loading_Air_var.get()))
         self.queue.put((time.sleep, self.air_time.get()))
         self.queue.put((self.loading_valve.switchvalve, self.loading_load_var.get()))
 
