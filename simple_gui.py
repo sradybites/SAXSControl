@@ -91,13 +91,18 @@ class Main:
         self.remaining_buffer_vol_var = tk.DoubleVar()
         self.remaining_buffer_real = 0
         self.remaining_sample_real = 0
+        self.oil_used = 0
+        self.oil_used_var = tk.DoubleVar()
+        self.oil_used_label = tk.Label(self.auto_page, font=auto_button_half_font, text="Oil Used:", bg=auto_color)
+        self.oil_used_vol = tk.Label(self.auto_page, font=auto_button_font, textvariable=self.oil_used_var)
+        self.remaining_sample = tk.Label(self.auto_page, font=auto_button_half_font, text="Remaining Sample:", bg=auto_color)
         self.remaining_sample_vol_var = tk.DoubleVar()
         self.remaining_buffer = tk.Label(self.auto_page, font=auto_button_half_font, text="Remaining Buffer:", bg=auto_color)
         self.remaining_sample = tk.Label(self.auto_page, font=auto_button_half_font, text="Remaining Sample:", bg=auto_color)
         self.remaining_buffer_vol = tk.Label(self.auto_page, font=auto_button_font, textvariable=self.remaining_buffer_vol_var)
         self.remaining_sample_vol = tk.Label(self.auto_page, font=auto_button_font, textvariable=self.remaining_sample_vol_var)
-        self.clean_button = tk.Button(self.auto_page, text='Clean', font=auto_button_font, width=auto_button_width*2+2, height=3, bg=auto_color, command=self.clean_only_command)
-        self.refill_button = tk.Button(self.auto_page, text="Refill", font=auto_button_font, width=auto_button_width*2+2, height=3, bg=auto_color, command=self.cerberus_clean_and_refill_command)
+        self.clean_button = tk.Button(self.auto_page, text='Clean', font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.clean_only_command)
+        self.refill_button = tk.Button(self.auto_page, text="Refill", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.refill_only_command)
         self.set_main_flowrate = tk.Button(self.auto_page, text='Set Flowrate', font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.set_auto_flowrate_command)
         self.main_flowrate = tk.Spinbox(self.auto_page, from_=0, to_=100, textvariable=self.auto_flowrate_variable, font='Arial 30 bold', width = 10, bg=auto_color, justify="right")
         self.pumps_running_bool = False
@@ -226,8 +231,8 @@ class Main:
         # Loop Volumes
         self.buffer_loop_vol_var = tk.DoubleVar()
         self.sample_loop_vol_var = tk.DoubleVar()
-        self.buffer_loop_vol_var.set(0.8)
-        self.sample_loop_vol_var.set(0.4)
+        self.buffer_loop_vol_var.set(0.150)
+        self.sample_loop_vol_var.set(0.075)
 
         self.buffer_loop_label = tk.Label(self.config_page, text="Buffer loop Vol (ml): ", bg=self.label_bg_color)
         self.sample_loop_label = tk.Label(self.config_page, text="Sample loop Vol (ml): ", bg=self.label_bg_color)
@@ -291,19 +296,22 @@ class Main:
         # Auto Page Buttons
         self.run_buffer.grid(row=0, column=0, rowspan=2, padx=10)
         self.run_sample.grid(row=0, column=1, rowspan=2, padx=10)
-        self.remaining_buffer.grid(row=3, column=3, padx=10)
-        self.remaining_sample.grid(row=4, column=3, padx=10)
             # second row
         self.run_pumps.grid(row=3, column=0, rowspan=2, padx=0, columnspan=2, pady=10)
         #self.pause_pump.grid(row=3, column=1, rowspan=2, padx=10, pady=10)
+        self.remaining_buffer.grid(row=3, column=3, padx=10)
+        self.remaining_sample.grid(row=4, column=3, padx=10)
         self.remaining_buffer_vol.grid(row=3, column=4)
         self.remaining_sample_vol.grid(row=4, column=4)
+
+        self.oil_used_label.grid(row=5, column=3, padx=10)
+        self.oil_used_vol.grid(row=5, column=4)
           # third row
         self.main_flowrate.grid(row=6, column=0, rowspan=2, padx=10)
         self.set_main_flowrate.grid(row=6, column=1, rowspan=2, padx=10)
             # fourth rowcounter
-        self.clean_button.grid(row=9, column=0, rowspan=2, pady=10, columnspan=2)
-        self.refill_button.grid(row=9, column=3, rowspan=2, pady=10, columnspan=2)
+        self.clean_button.grid(row=9, column=0, rowspan=2, pady=10)
+        self.refill_button.grid(row=9, column=1, rowspan=2, pady=10)
         self.load_buffer_button.grid(row=12, column=0, rowspan=2, padx=10)
         self.load_sample_button.grid(row=12, column=1, rowspan=2, padx=10)
 
@@ -484,6 +492,20 @@ class Main:
         self.queue.put(self.set_refill_flag_true)
         self.queue.put(self.play_done_sound)
 
+    def refill_only_command(self):
+        self.queue.put((self.python_logger.info, "Refilling pumps"))
+        self.queue.put((self.pump.refill_volume, (self.oil_used, self.refill_rate) ))
+        self.queue.put((self.cerberus_pump.refill_volume, (self.oil_used, self.refill_rate) ))
+        self.queue.put((self.pump.wait_until_stopped, 120))
+        self.queue.put((self.cerberus_pump.wait_until_stopped, 120))
+        self.queue.put(self.pump.infuse)
+        self.queue.put(self.cerberus_pump.infuse)
+        self.queue.put(self.reset_oil_vol)
+        self.queue.put((self.python_logger.info, "Refilling pumps"))
+
+    def reset_oil_vol(self):
+        self.oil_used = 0
+
     def set_refill_flag_true(self):
         """def this_this_dumb - This function is so that the flag setting is done in the queue.
         This way it if it fails the flag isn't reset"""
@@ -602,7 +624,8 @@ class Main:
     def update_delivered_vol(self):
         pump1vol = float(self.pump.get_delivered_volume())
         pump2vol = float(self.cerberus_pump.get_delivered_volume())
-        if pump1vol>pump2vol:
+        if pump1vol > pump2vol:
+            self.oil_used += pump1vol
             if self.running_pos == "buffer":
                 self.remaining_buffer_real = round(self.remaining_buffer_real-pump1vol,5)
                 self.remaining_buffer_vol_var.set(self.remaining_buffer_real)
@@ -610,12 +633,14 @@ class Main:
                 self.remaining_sample_real = round(self.remaining_sample_real-pump1vol,5)
                 self.remaining_sample_vol_var.set(self.remaining_sample_real)
         else:
+            self.oil_used += pump2vol
             if self.running_pos == "buffer":
                 self.remaining_buffer_real = round(self.remaining_buffer_real-pump2vol,5)
                 self.remaining_buffer_vol_var.set(self.remaining_buffer_real)
             elif self.running_pos == "sample":
                 self.remaining_sample_real = round(self.remaining_sample_real-pump2vol,5)
                 self.remaining_sample_vol_var.set(self.remaining_sample_real)
+        self.oil_used_var.set(self.oil_used)
 
     def reset_delivered_vol(self):
         self.remaining_buffer_real = self.buffer_loop_vol_var.get()
