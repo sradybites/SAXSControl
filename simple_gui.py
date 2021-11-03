@@ -120,7 +120,7 @@ class Main:
         self.coil_valve_names_label =tk.Label(self.config_page,text="Cerberus Oil Valve Configuration:", bg=self.gui_bg_color)
         self.loading_valve_names_label =tk.Label(self.config_page,text="Loading Valve Configuration:", bg=self.gui_bg_color)
         self.cerberus_loading_valve_names_label = tk.Label(self.config_page,text="Cerberus Loading Valve Configuration:", bg=self.gui_bg_color)
-
+        self.refill_rate = 150
         # Loading valve possitions
         # Variables
         self.loading_cell_var = tk.IntVar()
@@ -494,8 +494,8 @@ class Main:
 
     def refill_only_command(self):
         self.queue.put((self.python_logger.info, "Refilling pumps"))
-        self.queue.put((self.pump.refill_volume, (self.oil_used, self.refill_rate) ))
-        self.queue.put((self.cerberus_pump.refill_volume, (self.oil_used, self.refill_rate) ))
+        self.queue.put((self.pump.refill_volume, self.oil_used, self.refill_rate ))
+        self.queue.put((self.cerberus_pump.refill_volume, self.oil_used, self.refill_rate ))
         self.queue.put((self.pump.wait_until_stopped, 120))
         self.queue.put((self.cerberus_pump.wait_until_stopped, 120))
         self.queue.put(self.pump.infuse)
