@@ -8,6 +8,7 @@ Josue San Emeterio
 
 
 import tkinter as tk
+from tkinter import messagebox
 import tkinter.ttk as ttk
 import time
 from widgets import COMPortSelector, ConsoleUi
@@ -493,6 +494,11 @@ class Main:
         self.queue.put(self.play_done_sound)
 
     def refill_only_command(self):
+        MsgBox = messagebox.askquestion('Warning', 'Please set elveflow Ch4 pressure to 8000bar ?', icon='warning')
+        if MsgBox == 'yes':
+            pass
+        else:
+            return
         self.queue.put((self.python_logger.info, "Refilling pumps"))
         self.queue.put((self.pump.refill_volume, self.oil_used, self.refill_rate ))
         self.queue.put((self.cerberus_pump.refill_volume, self.oil_used, self.refill_rate ))
@@ -503,6 +509,11 @@ class Main:
         self.queue.put(self.reset_oil_vol)
         self.queue.put((self.python_logger.info, "Refilling pumps"))
 
+        MsgBox = messagebox.askquestion('Warning', 'Please set elveflow Ch4 pressure to 0', icon='warning')
+        if MsgBox == 'yes':
+            pass
+        else:
+            return
     def reset_oil_vol(self):
         self.oil_used = 0
 
