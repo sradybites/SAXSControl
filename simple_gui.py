@@ -507,13 +507,16 @@ class Main:
         self.queue.put(self.pump.infuse)
         self.queue.put(self.cerberus_pump.infuse)
         self.queue.put(self.reset_oil_vol)
-        self.queue.put((self.python_logger.info, "Refilling pumps"))
+        self.queue.put((self.python_logger.info, "Done refilling pumps"))
+        self.queue.put(self.elveflow_reminder)
 
+    def elveflow_reminder(self):
         MsgBox = messagebox.askquestion('Warning', 'Please set elveflow Ch4 pressure to 0', icon='warning')
         if MsgBox == 'yes':
             pass
         else:
             return
+
     def reset_oil_vol(self):
         self.oil_used = 0
 
@@ -536,30 +539,29 @@ class Main:
         self.queue.put((self.python_logger.info, "Starting to clean buffer"))
         self.queue.put((self.oil_valve.switchvalve, self.oil_waste_var.get()))
         self.queue.put((self.sample_valve.switchvalve, loop))
-        self.queue.put((self.loading_valve.switchvalve, self.loading_LSoap_var.get()))
-        self.queue.put((time.sleep, self.low_soap_time.get()))
+        self.queue.put((self.loading_valve.switchvalve, self.loading_HSoap_var.get()))
+        self.queue.put((time.sleep, self.high_soap_time.get()))
         self.queue.put((self.loading_valve.switchvalve, self.loading_Water_var.get()))  # to avoid passing oil
         self.queue.put((self.loading_valve.switchvalve, self.loading_load_var.get()))
 
         self.queue.put((self.python_logger.info, "Cleaning cerberus"))
         self.queue.put((self.cerberus_oil_valve.switchvalve, self.cerberus_oil_waste_var.get()))
         self.queue.put((self.ligand_valve.switchvalve, loop))
-        self.queue.put((self.cerberus_loading_valve.switchvalve, self.cerberus_loading_LSoap_var.get()))
-        self.queue.put((time.sleep, self.low_soap_time.get()))
+        self.queue.put((self.cerberus_loading_valve.switchvalve, self.cerberus_loading_HSoap_var.get()))
+        self.queue.put((time.sleep, self.high_soap_time.get()))
 
         self.queue.put((self.python_logger.info, "Flushing High Flow Soap"))
         self.queue.put((self.cerberus_oil_valve.switchvalve, self.cerberus_oil_waste_var.get()))
         self.queue.put((self.ligand_valve.switchvalve, loop))
-        self.queue.put((self.cerberus_loading_valve.switchvalve, self.cerberus_loading_HSoap_var.get()))
+        self.queue.put((self.cerberus_loading_valve.switchvalve, self.cerberus_loading_LSoap_var.get()))
         self.queue.put((self.oil_valve.switchvalve, self.oil_waste_var.get()))
         self.queue.put((self.sample_valve.switchvalve, loop))
-        self.queue.put((self.loading_valve.switchvalve, self.loading_HSoap_var.get()))
-        self.queue.put((time.sleep, self.high_soap_time.get()))
+        self.queue.put((self.loading_valve.switchvalve, self.loading_LSoap_var.get()))
+        self.queue.put((time.sleep, self.low_soap_time.get()))
 
         self.queue.put((self.python_logger.info, "Flushing Water"))
         self.queue.put((self.cerberus_oil_valve.switchvalve, self.cerberus_oil_waste_var.get()))
         self.queue.put((self.ligand_valve.switchvalve, loop))
-
         self.queue.put((self.cerberus_loading_valve.switchvalve, self.cerberus_loading_Water_var.get()))
         self.queue.put((self.oil_valve.switchvalve, self.oil_waste_var.get()))
         self.queue.put((self.sample_valve.switchvalve, loop))
@@ -676,10 +678,10 @@ class Main:
     def run_buffer_command(self):
         self.queue.put((self.loading_valve.switchvalve, self.loading_cell_var.get()))
         self.queue.put((self.oil_valve.switchvalve, self.oil_pump_var.get()))
-        self.queue.put((self.sample_valve.switchvalve, 1))
+        self.queue.put((self.sample_valve.switchvalve, 0))
         self.queue.put((self.cerberus_loading_valve.switchvalve, self.cerberus_loading_cell_var.get()))
         self.queue.put((self.cerberus_oil_valve.switchvalve, self.cerberus_oil_pump_var.get()))
-        self.queue.put((self.ligand_valve.switchvalve, 1))
+        self.queue.put((self.ligand_valve.switchvalve, 0))
         self.queue.put(self.toggle_to_buffer)
         # change valve possitions
     def toggle_to_buffer(self):
@@ -690,10 +692,10 @@ class Main:
     def run_sample_command(self):
         self.queue.put((self.loading_valve.switchvalve, self.loading_cell_var.get()))
         self.queue.put((self.oil_valve.switchvalve, self.oil_pump_var.get()))
-        self.queue.put((self.sample_valve.switchvalve, 0))
+        self.queue.put((self.sample_valve.switchvalve, 1))
         self.queue.put((self.cerberus_loading_valve.switchvalve, self.cerberus_loading_cell_var.get()))
         self.queue.put((self.cerberus_oil_valve.switchvalve, self.cerberus_oil_pump_var.get()))
-        self.queue.put((self.ligand_valve.switchvalve, 0))
+        self.queue.put((self.ligand_valve.switchvalve, 1))
         self.queue.put(self.toggle_to_sample)
 
         # change valve possitions
@@ -810,7 +812,7 @@ class Main:
             pass
 
     def toggle_buttons(self):
-        buttons = (self.run_buffer, self.run_sample, self.load_buffer_button, self.load_sample_button, self.clean_button)
+        buttons = (self.run_buffer, self.run_sample, self.load_buffer_button, self.load_sample_button, self.clean_button, self.refill_button)
 
         if self.queue_busy or self.pumps_running_bool:
             for button in buttons:
