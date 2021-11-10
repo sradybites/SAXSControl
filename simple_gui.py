@@ -128,19 +128,19 @@ class Main:
 
         self.purge_possition_label = tk.Label(self.config_page, text="Purge valve positions:", bg=self.label_bg_color, width = 3)
         self.purge_running_label = tk.Label(self.config_page, text="running:", bg=self.label_bg_color)
-        self.purge_running_pos = tk.IntVar(value=0)
+        self.purge_running_pos = tk.IntVar(value=2)
         self.purge_running_box = tk.Spinbox(self.config_page, from_=0, to=100, textvariable=self.purge_running_pos, width = 3)
 
         self.purge_water_label = tk.Label(self.config_page, text="Water Purge:", bg=self.label_bg_color)
-        self.purge_water_pos = tk.IntVar(value=0)
+        self.purge_water_pos = tk.IntVar(value=3)
         self.purge_water_box = tk.Spinbox(self.config_page, from_=0, to=100, textvariable=self.purge_water_pos, width = 3)
 
         self.purge_soap_label = tk.Label(self.config_page, text="Soap:", bg=self.label_bg_color)
-        self.purge_soap_pos = tk.IntVar(value=0)
+        self.purge_soap_pos = tk.IntVar(value=4)
         self.purge_soap_box = tk.Spinbox(self.config_page, from_=0, to=100, textvariable=self.purge_soap_pos, width = 3)
 
         self.purge_air_label = tk.Label(self.config_page, text="Air:", bg=self.label_bg_color)
-        self.purge_air_pos = tk.IntVar(value=0)
+        self.purge_air_pos = tk.IntVar(value=1)
         self.purge_air_box = tk.Spinbox(self.config_page, from_=0, to=100, textvariable=self.purge_air_pos, width = 3)
 
 
@@ -248,23 +248,23 @@ class Main:
         # Cleaning Times:
         self.cleaning_config_label = tk.Label(self.config_page, text="Cleaning Parameters:",  bg=self.gui_bg_color)
         self.low_soap_time_label = tk.Label(self.config_page, text="Low soap time:", bg=self.label_bg_color)
-        self.low_soap_time = tk.IntVar(value=0)
+        self.low_soap_time = tk.IntVar(value=15)
         self.low_soap_time_box = tk.Spinbox(self.config_page, from_=0, to=1000, width=3, textvariable=self.low_soap_time)
         self.high_soap_time_label = tk.Label(self.config_page, text="High soap time:", bg=self.label_bg_color)
-        self.high_soap_time = tk.IntVar(value=0)
+        self.high_soap_time = tk.IntVar(value=15)
         self.high_soap_time_box = tk.Spinbox(self.config_page, from_=0, to=1000, width=3, textvariable=self.high_soap_time)
         self.water_time_label = tk.Label(self.config_page, text="Water time:", bg=self.label_bg_color)
-        self.water_time = tk.IntVar(value=0)
+        self.water_time = tk.IntVar(value=15)
         self.water_time_box = tk.Spinbox(self.config_page, from_=0, to=1000, width=3, textvariable=self.water_time)
         self.air_time_label = tk.Label(self.config_page, text="Air time:", bg=self.label_bg_color)
-        self.air_time = tk.IntVar(value=0)
+        self.air_time = tk.IntVar(value=15)
         self.air_time_box = tk.Spinbox(self.config_page, from_=0, to=1000, width=3, textvariable=self.air_time)
 
         # Loop Volumes
         self.buffer_loop_vol_var = tk.DoubleVar()
         self.sample_loop_vol_var = tk.DoubleVar()
-        self.buffer_loop_vol_var.set(0.150)
-        self.sample_loop_vol_var.set(0.075)
+        self.buffer_loop_vol_var.set(0.140)
+        self.sample_loop_vol_var.set(0.070)
 
         self.buffer_loop_label = tk.Label(self.config_page, text="Buffer loop Vol (ml): ", bg=self.label_bg_color)
         self.sample_loop_label = tk.Label(self.config_page, text="Sample loop Vol (ml): ", bg=self.label_bg_color)
@@ -467,13 +467,13 @@ class Main:
         self.controller.logger = self.python_logger  # Pass the logger to the controller
 
         # Manual Pqage Purge adding
-        self.purge_button.grid(row=99, column=0, columnspan=2,rowspan=1, sticky=tk.E+tk.N+tk.S)
-        self.purge_soap_button.grid(row=100, column=0, columnspan=2, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.purge_dry_button.grid(row=100, column=2, columnspan=2 ,sticky=tk.W+tk.E+tk.N+tk.S)
-        self.purge_insert_soap_button.grid(row=101, column=0, columnspan=2, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.purge_insert_water_button.grid(row=101, column=2, columnspan=2, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.purge_sheath_insert_soap_button.grid(row=102, column=0, columnspan=2, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.purge_sheath_insert_water_button.grid(row=102, column=2, columnspan=2, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_button.grid(row=99, column=0, columnspan=12,rowspan=1, sticky=tk.N+tk.S)
+        self.purge_soap_button.grid(row=100, column=0, columnspan=6, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_dry_button.grid(row=100, column=6, columnspan=6 ,sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_insert_soap_button.grid(row=101, column=0, columnspan=6, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_insert_water_button.grid(row=101, column=6, columnspan=6, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_sheath_insert_soap_button.grid(row=102, column=0, columnspan=6, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_sheath_insert_water_button.grid(row=102, column=6, columnspan=6, sticky=tk.W+tk.E+tk.N+tk.S)
 
 
 
@@ -691,7 +691,7 @@ class Main:
         pump1vol = float(self.pump.get_delivered_volume())
         pump2vol = float(self.cerberus_pump.get_delivered_volume())
         if pump1vol > pump2vol:
-            self.oil_used += pump1vol
+            self.oil_used += round(pump1vol,5)
             if self.running_pos == "buffer":
                 self.remaining_buffer_real = round(self.remaining_buffer_real-pump1vol,5)
                 self.remaining_buffer_vol_var.set(self.remaining_buffer_real)
@@ -699,7 +699,7 @@ class Main:
                 self.remaining_sample_real = round(self.remaining_sample_real-pump1vol,5)
                 self.remaining_sample_vol_var.set(self.remaining_sample_real)
         else:
-            self.oil_used += pump2vol
+            self.oil_used += round(pump2vol,5)
             if self.running_pos == "buffer":
                 self.remaining_buffer_real = round(self.remaining_buffer_real-pump2vol,5)
                 self.remaining_buffer_vol_var.set(self.remaining_buffer_real)
