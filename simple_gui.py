@@ -115,6 +115,37 @@ class Main:
         self.manual_page_buttons = []
         self.manual_page_variables = []
 
+        self.purge_button = tk.Button(self.manual_page, text='Purge', command=self.purge_command, font=auto_button_font, width=auto_button_width, height=3)
+        self.purge_soap_button = tk.Button(self.manual_page, text='Purge Soap', command=self.purge_soap_command, font=auto_button_font, width=auto_button_width)
+        self.purge_dry_button = tk.Button(self.manual_page, text='Dry Sheath', command=self.purge_dry_command, font=auto_button_font, width=auto_button_width)
+
+        self.purge_insert_soap_button = tk.Button(self.manual_page, text='Soap insert', command=lambda: self.insert_purge("Soap"), font=auto_button_font, width=auto_button_width+2)
+        self.purge_insert_water_button = tk.Button(self.manual_page, text='Water insert', command=lambda: self.insert_purge("Water"), font=auto_button_font, width=auto_button_width+2)
+        self.purge_sheath_insert_soap_button = tk.Button(self.manual_page, text='Soap insert sheath', command=lambda: self.insert_sheath_purge("Soap"), font=auto_button_font, width=auto_button_width+5)
+        self.purge_sheath_insert_water_button = tk.Button(self.manual_page, text='Water insert sheath', command=lambda: self.insert_sheath_purge("Water"), font=auto_button_font, width=auto_button_width+5)
+
+        # Purge Configs
+
+        self.purge_possition_label = tk.Label(self.config_page, text="Purge valve positions:", bg=self.label_bg_color, width = 3)
+        self.purge_running_label = tk.Label(self.config_page, text="running:", bg=self.label_bg_color)
+        self.purge_running_pos = tk.IntVar(value=0)
+        self.purge_running_box = tk.Spinbox(self.config_page, from_=0, to=100, textvariable=self.purge_running_pos, width = 3)
+
+        self.purge_water_label = tk.Label(self.config_page, text="Water Purge:", bg=self.label_bg_color)
+        self.purge_water_pos = tk.IntVar(value=0)
+        self.purge_water_box = tk.Spinbox(self.config_page, from_=0, to=100, textvariable=self.purge_water_pos, width = 3)
+
+        self.purge_soap_label = tk.Label(self.config_page, text="Soap:", bg=self.label_bg_color)
+        self.purge_soap_pos = tk.IntVar(value=0)
+        self.purge_soap_box = tk.Spinbox(self.config_page, from_=0, to=100, textvariable=self.purge_soap_pos, width = 3)
+
+        self.purge_air_label = tk.Label(self.config_page, text="Air:", bg=self.label_bg_color)
+        self.purge_air_pos = tk.IntVar(value=0)
+        self.purge_air_box = tk.Spinbox(self.config_page, from_=0, to=100, textvariable=self.purge_air_pos, width = 3)
+
+
+
+
         # Config page
         self.config = None
         self.oil_valve_names_label =tk.Label(self.config_page,text="Oil Valve Configuration:", bg=self.gui_bg_color)
@@ -382,7 +413,18 @@ class Main:
         valverow=11
         self.sample_loop_label.grid(row=valverow, column=0, sticky=tk.W+tk.N)
         self.sample_loop_entry.grid(row=valverow, column=1)
-
+        #Purge possitions
+        valverow=12
+        self.purge_possition_label.grid(row=valverow, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        valverow=13
+        self.purge_running_label.grid(row=valverow, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_running_box.grid(row=valverow, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_water_label.grid(row=valverow, column=2, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_water_box.grid(row=valverow, column=3, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_soap_label.grid(row=valverow, column=4, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_soap_box.grid(row=valverow, column=5, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_air_label.grid(row=valverow, column=6, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_air_box.grid(row=valverow, column=7, sticky=tk.W+tk.E+tk.N+tk.S)
         # Setup page
         self.refresh_com_ports.grid(row=0, column=0)
         self.AddPump.grid(row=0, column=1)
@@ -423,6 +465,17 @@ class Main:
         self.advanced_logger_gui.pass_logger(self.python_logger)
         # self.python_logger.addHandler(file_handler)  # logging to a file
         self.controller.logger = self.python_logger  # Pass the logger to the controller
+
+        # Manual Pqage Purge adding
+        self.purge_button.grid(row=99, column=0, columnspan=2,rowspan=1, sticky=tk.E+tk.N+tk.S)
+        self.purge_soap_button.grid(row=100, column=0, columnspan=2, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_dry_button.grid(row=100, column=2, columnspan=2 ,sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_insert_soap_button.grid(row=101, column=0, columnspan=2, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_insert_water_button.grid(row=101, column=2, columnspan=2, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_sheath_insert_soap_button.grid(row=102, column=0, columnspan=2, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.purge_sheath_insert_water_button.grid(row=102, column=2, columnspan=2, sticky=tk.W+tk.E+tk.N+tk.S)
+
+
 
     def stop(self):
         """Stop all running widgets."""
@@ -777,11 +830,12 @@ class Main:
 
     def insert_purge(self, fluid=""):
         self.unset_insert_purge()
+        pos=self.oil_insertpurge_var.get()
         if not self.is_insert_purging:
             self.queue.put((self.python_logger.info, "Purgin insert with "+fluid))
-            self.queue.put((self.loading_valve.switchvalve, "Run"))
+            self.queue.put((self.loading_valve.switchvalve, self.loading_cell_var.get()))
             self.queue.put((self.sample_valve.switchvalve, 0))
-            self.queue.put((self.oil_valve.switchvalve, fluid))
+            self.queue.put((self.oil_valve.switchvalve, pos))
             if fluid == "Soap":
                 self.queue.put(lambda: self.purge_insert_soap_button.configure(bg="green"))
             elif fluid == "Water":
@@ -793,14 +847,13 @@ class Main:
             pass
 
     def insert_sheath_purge(self, fluid=""):
-        if not self.sucrose:
-            self.python_logger.warning("Button only for sucrose mode")
-            return
         self.unset_insert_sheath_purge()
+        pos=self.cerberus_oil_insertpurge_var.get()
+
         if not self.is_insert_sheath_purging:
             self.queue.put((self.python_logger.info, "Purgin insert with "+fluid))
-            self.queue.put((self.cerberus_loading_valve.switchvalve, "Run"))
-            self.queue.put((self.cerberus_oil_valve.switchvalve, fluid))
+            self.queue.put((self.cerberus_loading_valve.switchvalve, self.cerberus_loading_cell_var.get()))
+            self.queue.put((self.cerberus_oil_valve.switchvalve, pos))
             if fluid == "Soap":
                 self.queue.put(lambda: self.purge_sheath_insert_soap_button.configure(bg="green"))
             elif fluid == "Water":
