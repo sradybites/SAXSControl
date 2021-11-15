@@ -92,7 +92,7 @@ class Main:
         self.remaining_buffer_vol_var = tk.DoubleVar()
         self.remaining_buffer_real = 0
         self.remaining_sample_real = 0
-        self.oil_used = 0
+        self.oil_used = 0.0
         self.oil_used_var = tk.DoubleVar()
         self.oil_used_label = tk.Label(self.auto_page, font=auto_button_half_font, text="Oil Used:", bg=auto_color)
         self.oil_used_vol = tk.Label(self.auto_page, font=auto_button_font, textvariable=self.oil_used_var)
@@ -103,7 +103,7 @@ class Main:
         self.remaining_buffer_vol = tk.Label(self.auto_page, font=auto_button_font, textvariable=self.remaining_buffer_vol_var)
         self.remaining_sample_vol = tk.Label(self.auto_page, font=auto_button_font, textvariable=self.remaining_sample_vol_var)
         self.clean_button = tk.Button(self.auto_page, text='Clean', font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.clean_only_command)
-        self.refill_button = tk.Button(self.auto_page, text="Refill", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.refill_only_command)
+        self.refill_button = tk.Button(self.auto_page, text="Clean+Refill", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.refill_only_command)
         self.set_main_flowrate = tk.Button(self.auto_page, text='Set Flowrate', font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.set_auto_flowrate_command)
         self.main_flowrate = tk.Spinbox(self.auto_page, from_=0, to_=100, textvariable=self.auto_flowrate_variable, font='Arial 30 bold', width = 10, bg=auto_color, justify="right")
         self.pumps_running_bool = False
@@ -555,6 +555,7 @@ class Main:
         self.queue.put((self.python_logger.info, "Refilling pumps"))
         self.queue.put((self.pump.refill_volume, self.oil_used, self.refill_rate ))
         self.queue.put((self.cerberus_pump.refill_volume, self.oil_used, self.refill_rate ))
+        self.clean_only_command()
         self.queue.put((self.pump.wait_until_stopped, 120))
         self.queue.put((self.cerberus_pump.wait_until_stopped, 120))
         self.queue.put(self.pump.infuse)
@@ -571,7 +572,8 @@ class Main:
             return
 
     def reset_oil_vol(self):
-        self.oil_used = 0
+        self.oil_used = 0.0
+        self.oil_used_var.set(self.oil_used)
 
     def set_refill_flag_true(self):
         """def this_this_dumb - This function is so that the flag setting is done in the queue.
@@ -626,6 +628,7 @@ class Main:
         self.queue.put((self.ligand_valve.switchvalve, loop))
         self.queue.put((self.cerberus_loading_valve.switchvalve, self.cerberus_loading_Air_var.get()))
         self.queue.put((time.sleep, self.air_time.get()))
+        self.queue.put((self.cerberus_loading_valve.switchvalve, self.cerberus_loading_Water_var.get()))
         self.queue.put((self.cerberus_loading_valve.switchvalve, self.cerberus_loading_load_var.get()))
 
         self.queue.put((self.python_logger.info, "Air drying 2"))
@@ -691,7 +694,7 @@ class Main:
         pump1vol = float(self.pump.get_delivered_volume())
         pump2vol = float(self.cerberus_pump.get_delivered_volume())
         if pump1vol > pump2vol:
-            self.oil_used += round(pump1vol,5)
+            self.oil_used += pump1vol
             if self.running_pos == "buffer":
                 self.remaining_buffer_real = round(self.remaining_buffer_real-pump1vol,5)
                 self.remaining_buffer_vol_var.set(self.remaining_buffer_real)
@@ -699,14 +702,14 @@ class Main:
                 self.remaining_sample_real = round(self.remaining_sample_real-pump1vol,5)
                 self.remaining_sample_vol_var.set(self.remaining_sample_real)
         else:
-            self.oil_used += round(pump2vol,5)
+            self.oil_used += pump2vol
             if self.running_pos == "buffer":
                 self.remaining_buffer_real = round(self.remaining_buffer_real-pump2vol,5)
                 self.remaining_buffer_vol_var.set(self.remaining_buffer_real)
             elif self.running_pos == "sample":
                 self.remaining_sample_real = round(self.remaining_sample_real-pump2vol,5)
                 self.remaining_sample_vol_var.set(self.remaining_sample_real)
-        self.oil_used_var.set(self.oil_used)
+        self.oil_used_var.set(round(self.oil_used, 5))
 
     def reset_delivered_vol(self):
         self.remaining_buffer_real = self.buffer_loop_vol_var.get()
@@ -1156,9 +1159,12 @@ class Main:
     def lower_vol(self):
         if self.running_pos == "buffer":
             self.remaining_buffer_vol_var.set(round(self.remaining_buffer_vol_var.get()-self.auto_flowrate_variable.get()/60000.0,5))
+            if self.remaining_buffer_vol_var.get()<=0:
+                self.run_pumps_button_command()
         elif self.running_pos == "sample":
             self.remaining_sample_vol_var.set(round(self.remaining_sample_vol_var.get()-self.auto_flowrate_variable.get()/60000.0,5))
-
+            if self.remaining_sample_vol_var.get()<=0:
+                self.run_pumps_button_command()
 
 if __name__ == "__main__":
     window = tk.Tk()

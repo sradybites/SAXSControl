@@ -436,6 +436,7 @@ class HPump:
             self.logger.info(self.name+" Mode set to program")
 
     def set_target_vol(self, vol, resource=pumpserial):
+        vol=round(vol,5) # get rid of that noise
         with self._lock:
             if not HPump.enabled:
                 self.logger.info(self.name+" not enabled")
