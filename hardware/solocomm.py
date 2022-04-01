@@ -1,4 +1,11 @@
-"""The butchered remains of the GLine robot software for SPEC control."""
+"""The butchered remains of the GLine robot software for SPEC control.
+
+SPEC is the UNIX-based software package used by CHESS facilities for instrument
+control, since physical equipment inside an X-ray beam cannot be manually
+adjusted. As of my writing this, the software does not and should not communicate
+with SPEC, as this interplay has introduced a lot of problems. SPEC is operated
+from a separate computer as this software.
+"""
 
 import time
 import threading

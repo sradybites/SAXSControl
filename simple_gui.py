@@ -24,20 +24,53 @@ import warnings
 
 FULLSCREEN = False   # For testing, turn this off
 
-
+# TODO: hardcode variables and get rid of all magic numbers
+# TODO: design an actual object hierarchy to organize code
 class Main:
-    def __init__(self, window):
-        """Set up the window and button variables."""
-        print("initializing GUI...")
+    """Represents the software for controlling the beamline
+    setup colloquially known as 'the Cube.'
 
-        self._lock = threading.RLock()
-        self.python_logger = logging.getLogger("python")
+    ...
+
+    Attributes (non-trivial)
+    ----------
+    _lock : threading.RLock
+        a repeatable lock used for thread-safe access of the interface
+    python_logger : logging.Logger
+        python logger for debugging, errors, etc
+    main_window : tkinter.Tk
+        top-level application window
+    listen_run_flag : threading.Event
+        flag that instructs the control threads to keep running
+
+    """
+
+    def __init__(self, window):
+        """Create a new Main object using the given tkinter window.
+
+        Sets up the window and button variables. Sets up the control interface
+        by page, of which there are four:
+
+            Auto: simple, <10 buttons for abstract control of pumps/valves
+            Manual: indiscreet set of buttons allowing meticulous control
+            Config: set various parameters for the setup, including valve
+                positions, loop volumes, and execution lengths
+            Setup: configure connections between all the various devices in
+                the setup
+        """
+
+        self._lock = threading.RLock() # repeatable lock for thread-safe access
+        self.python_logger = logging.getLogger("python") # create logger named "python"
+
+        self.adxIsDone = False # not sure what this is for? not used at all in this file
+        self.illegal_chars = '!@#$%^&*()."\\|:;<>?=~ ' + "'"
+
         self.main_window = window
         self.main_window.report_callback_exception = self.handle_exception
         self.main_window.title('Main Window')
-        self.adxIsDone = False
-        self.illegal_chars = '!@#$%^&*()."\\|:;<>?=~ ' + "'"
         self.main_window.attributes("-fullscreen", True)  # Makes the window fullscreen
+
+        # Set window dimensions
         window_width = self.main_window.winfo_screenwidth()
         window_height = self.main_window.winfo_screenheight()
         core_width = round(2*window_width/3)
@@ -78,12 +111,12 @@ class Main:
         self.advanced_logs = tk.Frame(self.logs)
 
 
-        # Automatic buttons
+        ### Auto Page ###
         auto_button_font = 'Arial 20 bold'
         auto_button_half_font = 'Arial 14 bold'
         auto_button_width = 14
         auto_color = "white"
-        self.running_pos = ""
+        self.running_pos = "" # represents the valve position(s)/configuration. takes two values: "buffer" and "sample". TODO: make possible values explicit with custom Enum class
         self.auto_flowrate_variable = tk.DoubleVar()
         self.run_buffer = tk.Button(self.auto_page, text="Set Buffer", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.run_buffer_command)  # Maybe sets flowpath but doesnt start pumps?
         self.run_sample = tk.Button(self.auto_page, text="Set Sample", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.run_sample_command)  # ""
@@ -103,13 +136,15 @@ class Main:
         self.remaining_buffer_vol = tk.Label(self.auto_page, font=auto_button_font, textvariable=self.remaining_buffer_vol_var)
         self.remaining_sample_vol = tk.Label(self.auto_page, font=auto_button_font, textvariable=self.remaining_sample_vol_var)
         self.clean_button = tk.Button(self.auto_page, text='Clean', font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.clean_only_command)
+        # FIXME: the "Clean+Refill" button only refills
         self.refill_button = tk.Button(self.auto_page, text="Clean+Refill", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.refill_only_command)
         self.set_main_flowrate = tk.Button(self.auto_page, text='Set Flowrate', font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.set_auto_flowrate_command)
         self.main_flowrate = tk.Spinbox(self.auto_page, from_=0, to_=100, textvariable=self.auto_flowrate_variable, font='Arial 30 bold', width = 10, bg=auto_color, justify="right")
         self.pumps_running_bool = False
         self.load_buffer_button = tk.Button(self.auto_page, text="Load Buffer", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.load_buffer_command)
         self.load_sample_button = tk.Button(self.auto_page, text="Load Sample", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.load_sample_command)
-        # Manual Page
+
+        ### Manual Page ###
         self.manual_button_font = 'Arial 10 bold'
         self.clean_sample_button = tk.Button(self.manual_page, text='Clean Sample', command=lambda: self.clean_loop(1), font=auto_button_font, width=auto_button_width+2)
         self.manual_page_buttons = []
@@ -146,7 +181,8 @@ class Main:
 
 
 
-        # Config page
+        ### Config Page ###
+        # FIXME: not all variables have unit labels, which creates ambiguity
         self.config = None
         self.oil_valve_names_label =tk.Label(self.config_page,text="Oil Valve Configuration:", bg=self.gui_bg_color)
         self.coil_valve_names_label =tk.Label(self.config_page,text="Cerberus Oil Valve Configuration:", bg=self.gui_bg_color)
@@ -283,7 +319,7 @@ class Main:
         self.is_insert_purging = False
         self.is_insert_sheath_purging = False
 
-        # Setup Page
+        ### Setup Page ###
         self.hardware_config_options = ("Pump", "Oil Valve", "Sample/Buffer Valve", "Loading Valve", "Purge", "cerberus Oil", "cerberus Load", "cerberus Pump")
         self.setup_page_buttons = []
         self.setup_page_variables = []
@@ -299,10 +335,12 @@ class Main:
         self.user_logger_gui = ConsoleUi.ConsoleUi(self.user_logs, True)
         self.user_logger_gui.set_levels((logging.INFO, logging.WARNING))
         self.advanced_logger_gui = ConsoleUi.ConsoleUi(self.advanced_logs)
-
         self.draw_static()
-        self.queue = solocomm.controlQueue
-        self.manual_queue = solocomm.ManualControlQueue
+
+        # brings in two queues to hold commands called from different pages
+        # the threads are instantiated and exist in solocomm.py
+        self.queue = solocomm.controlQueue # holds commands from Auto page
+        self.manual_queue = solocomm.ManualControlQueue # from Manual page
         self.queue_busy = False
         self.listen_run_flag = threading.Event()
         self.listen_run_flag.set()
@@ -435,7 +473,7 @@ class Main:
         self.I2CScanButton.grid(row=1, column=3)
         # self.refresh_com_list()
         # Create the default instruments
-        self.add_pump_set_buttons(name="Top Pump")  # Pump 1
+        self.add_pump_set_buttons(name="Top Pump")  # Pump 1  TODO: set address explicitly
         self.add_pump_set_buttons(name="Bottom Pump", address=1)  # Pump 2
         self.add_rheodyne_set_buttons(name="Loading", address=14)  # Loading valve 2
         self.add_rheodyne_set_buttons(name="Oil", address=8)  # Oil Valve
@@ -480,21 +518,23 @@ class Main:
     def stop(self):
         """Stop all running widgets."""
         self.control_thread.abortProcess = True
+        # TODO: abort manual thread
         self.stop_instruments()
 
     def stop_instruments(self):
         SAXSDrivers.InstrumentTerminateFunction(self.instruments)
 
     def start_control_thread(self):
-        """ Creates the thread for running instruments separate from auto thread"""
+        """ Creates the thread for running instruments from auto thread"""
         self.control_thread = solocomm.ControlThread(self)
-        self.control_thread.setDaemon(True)
+        self.control_thread.daemon = True
         self.control_thread.start()
 
     def start_manual_thread(self):
-        """ Creates the thread for running instruments separate from auto thread"""
+        """ Creates the thread for running instruments SEPARATE from auto thread"""
+        # FIXME: doesn't attribute manual thread to Main, change this or fix the control thread
         manual_thread = solocomm.ManualControlThread(self)
-        manual_thread.setDaemon(True)
+        manual_thread.daemon = True
         manual_thread.start()
 
     def handle_exception(self, exception, value, traceback):
@@ -504,7 +544,7 @@ class Main:
     def exit_(self):
         """Exit the GUI and stop all running things."""
         if self.listen_run_flag.is_set():
-            self.listen_run_flag.clear()
+            self.listen_run_flag.clear() # kills the control threads
         print("WAITING FOR OTHER THREADS TO SHUT DOWN...")
         print(threading.enumerate())
 
@@ -512,7 +552,7 @@ class Main:
         self.main_window.destroy()
 
 
-
+    # FIXME: does the following function even get used?
     def cerberus_clean_and_refill_command(self, vol_flag=True):
         if vol_flag:
             vol=self.cerberus_volume.get()/1000
@@ -663,6 +703,16 @@ class Main:
         self.load_loop(0)
 
     def run_pumps_button_command(self):
+        """Processes a press of the "Run Pumps" from the Auto page.
+
+        If the pumps are stopped, then they will start in whichever position
+        the setup is currently set to (sample or buffer). Before running, the
+        setup will update according to the Config page, as if the "Set [position]"
+        button was pressed for the position. No position, or more broadly
+        an invalid position, will log that the command was ignored.
+
+        If they are currently running, the pumps will actually stop.
+        """
         if not self.pumps_running_bool:
             if self.running_pos == "sample":
                 self.run_sample_command()
@@ -688,7 +738,7 @@ class Main:
 
 
     def stop_both_pumps(self):
-        self.queue.put(self.pump.stop) #this should stop all of them?
+        self.queue.put(self.pump.stop) # TODO: check if all pumps stop on command
 
     def update_delivered_vol(self):
         pump1vol = float(self.pump.get_delivered_volume())
@@ -1168,6 +1218,7 @@ class Main:
 
 if __name__ == "__main__":
     window = tk.Tk()
+    print("initializing GUI...")
     Main(window)
     window.mainloop()
     print("Main window now destroyed. Exiting.")

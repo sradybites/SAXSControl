@@ -11,7 +11,17 @@ class Closed(Exception):
 
 
 class CQueue(queue.Queue):
-    """Extension of a Queue that can be temporarily locked."""
+    """Extension of a Queue that can be temporarily locked.
+
+    ...
+
+    Attributes
+    ----------
+    use_put : threading.Lock
+        allows class methods to prevent race conditions and illegal queue puts
+    _can_put : bool
+        queue is open if True, closed if False
+    """
 
     def __init__(self, maxsize=0):
         """Initialize the queue and set to an open state."""
@@ -22,7 +32,7 @@ class CQueue(queue.Queue):
 
     def open(self):
         """Reopen the queue."""
-        self.use_put.acquire()
+        self.use_put.acquire() # acquire lock so no puts are made until _can_put is changed
         self._can_put = True
         self.use_put.release()
 
