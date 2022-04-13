@@ -136,7 +136,7 @@ class Main:
         self.remaining_buffer_vol = tk.Label(self.auto_page, font=auto_button_font, textvariable=self.remaining_buffer_vol_var)
         self.remaining_sample_vol = tk.Label(self.auto_page, font=auto_button_font, textvariable=self.remaining_sample_vol_var)
         self.clean_button = tk.Button(self.auto_page, text='Clean', font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.clean_only_command)
-        # FIXME: the "Clean+Refill" button only refills
+        # FIXME: the "Clean+Refill" button only seems to refill
         self.refill_button = tk.Button(self.auto_page, text="Clean+Refill", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.refill_only_command)
         self.set_main_flowrate = tk.Button(self.auto_page, text='Set Flowrate', font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.set_auto_flowrate_command)
         self.main_flowrate = tk.Spinbox(self.auto_page, from_=0, to_=100, textvariable=self.auto_flowrate_variable, font='Arial 30 bold', width = 10, bg=auto_color, justify="right")
@@ -182,14 +182,15 @@ class Main:
 
 
         ### Config Page ###
-        # FIXME: not all variables have unit labels, which creates ambiguity
-        self.config = None
+        # FIXME: not all values that are displayed have their units labelled, which creates ambiguity
+        # TODO: implement a config file loader, so settings can be saved and reloaded.
+        #       This already exists in the gui.py file.
         self.oil_valve_names_label =tk.Label(self.config_page,text="Oil Valve Configuration:", bg=self.gui_bg_color)
         self.coil_valve_names_label =tk.Label(self.config_page,text="Cerberus Oil Valve Configuration:", bg=self.gui_bg_color)
         self.loading_valve_names_label =tk.Label(self.config_page,text="Loading Valve Configuration:", bg=self.gui_bg_color)
         self.cerberus_loading_valve_names_label = tk.Label(self.config_page,text="Cerberus Loading Valve Configuration:", bg=self.gui_bg_color)
         self.refill_rate = 150
-        # Loading valve possitions
+        # Loading valve possitions (this chunk of code makes only 6 buttons...)
         # Variables
         self.loading_cell_var = tk.IntVar()
         self.loading_load_var = tk.IntVar()
@@ -198,6 +199,7 @@ class Main:
         self.loading_Water_var = tk.IntVar()
         self.loading_Air_var = tk.IntVar()
         # set Variables
+        # TODO: make these integer values less ambiguous. I believe they correspond to the position on the valve of a certain connection, but I am not sure.
         self.loading_cell_var.set(2)
         self.loading_load_var.set(3)
         self.loading_HSoap_var.set(6)
