@@ -94,7 +94,49 @@ class SAXSController(serial.Serial):
 
 
 class HPump:
-    """Class for controlling Harvard Pumps."""
+    """Class for controlling Harvard Pumps.
+
+    Any pump is communicated to using the Model 44 Protocol, which is detailed
+    in the PHD 4400 Manual. Among other helpful information for operating the
+    pumps, the manual explains all the different commands for serial
+    communication with the pump and how to set up a pump "daisy chain," which
+    is just two or more pumps connected in series to facilitate communications.
+
+    ...
+
+    Attributes
+    ----------
+    _lock : threading.RLock
+        a repeatable lock used for thread-safe programming
+    address : string
+        an integer value contained within a string that represents the pump
+        address, which is set manually on the pump through the RS-232 button.
+        By default, this value is set to 0.
+    running : bool
+        whether or not the pump is currently running.
+    infusing : bool
+        whether or not the pump is in Infuse mode. If false, the pump is in
+        Refill mode.
+    pc_connect : bool
+        whether or not the pump is directly connected to the computer. If false,
+        it is connected through the microcontroller, which is represented as
+        an extension of the serial.Serial class.
+    hardware_configuration : string
+        obsolete, can probably be removed from code
+    controller : SAXSController
+        the microcontroller managing every connection in the experimental setup
+        (valves, pumps, etc)
+
+    Variables
+    ----------
+    enabled : bool
+        whether or not the pump has a valid port, i.e. the pump is actually
+        capable of communicating with the software. This value is true if it
+        is set to connect either directly or through the controller.
+        Since multiple pumps are chained together, this is just stored in a
+        class variable because only one pump needs to connect to the computer
+        in a pump chain.
+    """
 
     # need a single serial for the class
     pumpserial = serial.Serial()
@@ -122,7 +164,12 @@ class HPump:
 
     # function to initialize ports
     def set_port(self, port, resource=pumpserial):
-        """Set the pump port."""
+        """Set the pump port.
+
+        Only relevant if the pump is connected to the computer. If connected
+        to the microcontroller, then the function to call would be
+        self.set_to_controller.
+        """
         if resource.is_open:
             resource.close()
         resource.port = port
@@ -154,7 +201,14 @@ class HPump:
 # To do in all. Read in confirmstion from pump.
 
     def start_pump(self, resource=pumpserial):
-        """Send a start command to the pump."""
+        """Send a start command to the pump.
+
+        Based on the pump manual, a start command for a pump in a chain uses the
+        following format:
+            <pump address> RUN <cr>
+        where the address is a mutable setting on the pump, and the carriage
+        return character is represented in ASCII as \r.
+        """
         with self._lock:
             responceflag = False
             if not HPump.enabled:
@@ -165,7 +219,7 @@ class HPump:
                     resource.open()
                 while resource.in_waiting > 0:  # Clear Buffer
                     resource.readline()
-                resource.write((self.address+"RUN\n\r").encode())
+                resource.write((self.address+"RUN\r").encode())
                 time.sleep(0.2)
                 if resource.in_waiting == 0:  # give extra time if it hasn't responded
                     self.logger.debug("No responce: Waiting")
@@ -186,7 +240,7 @@ class HPump:
                     self.controller.open()
                 while self.controller.in_waiting > 0:  # Clear Buffer
                     self.controller.readline_check()
-                self.controller.write(("-"+self.address+"RUN\n\r").encode())
+                self.controller.write(("-"+self.address+"RUN\r").encode())
                 time.sleep(0.2)
                 if self.controller.in_waiting == 0:  # give more time if it hasn't finished
                     self.logger.debug("No responce: Waiting")
@@ -206,6 +260,14 @@ class HPump:
                 raise RuntimeError
 
     def stop_pump(self, resource=pumpserial):
+        """Send a stop command to the pump.
+
+        Based on the pump manual, a start command for a pump in a chain uses the
+        following format:
+            <pump address> STP <cr>
+        where the address is a mutable setting on the pump, and the carriage
+        return character is represented in ASCII as \r.
+        """
         with self._lock:
             responceflag = False
             if not HPump.enabled:
