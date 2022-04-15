@@ -36,6 +36,8 @@ class SAXSController(serial.Serial):
         super().__init__(**kwargs)
         self.logger = logger
         self.enabled = False
+        if not os.path.exists('log'):
+            os.mkdir('log') # user may not have the logging directory, causing an exception to be thrown
         self.temp_logger = open('log/pump_%d.log' % time.time(), 'w+')
         # TODO: close properly
 
@@ -94,7 +96,7 @@ class SAXSController(serial.Serial):
 class HPump:
     """Class for controlling Harvard Pumps."""
 
-    # need a single serisl for the class
+    # need a single serial for the class
     pumpserial = serial.Serial()
 
     # Set port protperties
