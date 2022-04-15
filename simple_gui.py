@@ -122,15 +122,16 @@ class Main:
         self.run_sample = tk.Button(self.auto_page, text="Set Sample", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.run_sample_command)  # ""
         # self.pause_pump = tk.Button(self.auto_page, text="Pause Pumps", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color)  # This button pauses pumps between switching possitions. Should update infused vol
         self.run_pumps = tk.Button(self.auto_page, text="Run Pumps", font=auto_button_font, width=auto_button_width*2+2, height=3, command=self.run_pumps_button_command, bg="red", fg="white")  # This button is to restart pumps after pause. It needs to check for valve possitions, before starting.
-        self.remaining_buffer_vol_var = tk.DoubleVar()
-        self.remaining_buffer_real = 0
-        self.remaining_sample_real = 0
+        self.remaining_buffer_vol_var = tk.DoubleVar(value = 0.145)
+        self.remaining_buffer_real = 0.145
+        self.remaining_sample_real = 0.073
         self.oil_used = 0.0
+        self.target_vol = 0.0
         self.oil_used_var = tk.DoubleVar()
         self.oil_used_label = tk.Label(self.auto_page, font=auto_button_half_font, text="Oil Used:", bg=auto_color)
         self.oil_used_vol = tk.Label(self.auto_page, font=auto_button_font, textvariable=self.oil_used_var)
         self.remaining_sample = tk.Label(self.auto_page, font=auto_button_half_font, text="Remaining Sample:", bg=auto_color)
-        self.remaining_sample_vol_var = tk.DoubleVar()
+        self.remaining_sample_vol_var = tk.DoubleVar(value = 0.073)
         self.remaining_buffer = tk.Label(self.auto_page, font=auto_button_half_font, text="Remaining Buffer:", bg=auto_color)
         self.remaining_sample = tk.Label(self.auto_page, font=auto_button_half_font, text="Remaining Sample:", bg=auto_color)
         self.remaining_buffer_vol = tk.Label(self.auto_page, font=auto_button_font, textvariable=self.remaining_buffer_vol_var)
@@ -138,6 +139,7 @@ class Main:
         self.clean_button = tk.Button(self.auto_page, text='Clean', font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.clean_only_command)
         # FIXME: the "Clean+Refill" button only seems to refill
         self.refill_button = tk.Button(self.auto_page, text="Clean+Refill", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.refill_only_command)
+
         self.set_main_flowrate = tk.Button(self.auto_page, text='Set Flowrate', font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.set_auto_flowrate_command)
         self.main_flowrate = tk.Spinbox(self.auto_page, from_=0, to_=100, textvariable=self.auto_flowrate_variable, font='Arial 30 bold', width = 10, bg=auto_color, justify="right")
         self.pumps_running_bool = False
@@ -258,7 +260,7 @@ class Main:
         self.oil_insertpurge_var = tk.IntVar()
         self.oil_pump_var.set(4)
         self.oil_waste_var.set(5)
-        self.oil_insertpurge_var.set(1)
+        self.oil_insertpurge_var.set(2)
 
         self.oil_pump_entry = tk.Spinbox(self.config_page, textvariable=self.oil_pump_var, width=3)
         self.oil_waste_entry = tk.Spinbox(self.config_page, textvariable=self.oil_waste_var, width=3)
@@ -273,7 +275,7 @@ class Main:
         self.cerberus_oil_insertpurge_var = tk.IntVar()
         self.cerberus_oil_pump_var.set(3)
         self.cerberus_oil_waste_var.set(2)
-        self.cerberus_oil_insertpurge_var.set(4)
+        self.cerberus_oil_insertpurge_var.set(5)
 
         self.cerberus_oil_pump_entry = tk.Spinbox(self.config_page, textvariable=self.cerberus_oil_pump_var, width=3)
         self.cerberus_oil_waste_entry = tk.Spinbox(self.config_page, textvariable=self.cerberus_oil_waste_var, width=3)
@@ -286,16 +288,16 @@ class Main:
         # Cleaning Times:
         self.cleaning_config_label = tk.Label(self.config_page, text="Cleaning Parameters:",  bg=self.gui_bg_color)
         self.low_soap_time_label = tk.Label(self.config_page, text="Low soap time:", bg=self.label_bg_color)
-        self.low_soap_time = tk.IntVar(value=15)
+        self.low_soap_time = tk.IntVar(value=20)
         self.low_soap_time_box = tk.Spinbox(self.config_page, from_=0, to=1000, width=3, textvariable=self.low_soap_time)
         self.high_soap_time_label = tk.Label(self.config_page, text="High soap time:", bg=self.label_bg_color)
-        self.high_soap_time = tk.IntVar(value=15)
+        self.high_soap_time = tk.IntVar(value=20)
         self.high_soap_time_box = tk.Spinbox(self.config_page, from_=0, to=1000, width=3, textvariable=self.high_soap_time)
         self.water_time_label = tk.Label(self.config_page, text="Water time:", bg=self.label_bg_color)
-        self.water_time = tk.IntVar(value=15)
+        self.water_time = tk.IntVar(value=30)
         self.water_time_box = tk.Spinbox(self.config_page, from_=0, to=1000, width=3, textvariable=self.water_time)
         self.air_time_label = tk.Label(self.config_page, text="Air time:", bg=self.label_bg_color)
-        self.air_time = tk.IntVar(value=15)
+        self.air_time = tk.IntVar(value=30)
         self.air_time_box = tk.Spinbox(self.config_page, from_=0, to=1000, width=3, textvariable=self.air_time)
 
         # Loop Volumes
@@ -589,6 +591,10 @@ class Main:
         self.queue.put(self.play_done_sound)
 
     def refill_only_command(self):
+        if self.oil_used > 0.09 :
+            MsgBox = messagebox.showwarning('Warning', 'Oil refill volume is too large! \n Please refill manually', icon='warning')
+            return
+
         MsgBox = messagebox.askquestion('Warning', 'Please set elveflow Ch4 pressure to 8000bar ?', icon='warning')
         if MsgBox == 'yes':
             pass
@@ -597,7 +603,7 @@ class Main:
         self.queue.put((self.python_logger.info, "Refilling pumps"))
         self.queue.put((self.pump.refill_volume, self.oil_used, self.refill_rate ))
         self.queue.put((self.cerberus_pump.refill_volume, self.oil_used, self.refill_rate ))
-        self.clean_only_command()
+        #self.clean_only_command()
         self.queue.put((self.pump.wait_until_stopped, 120))
         self.queue.put((self.cerberus_pump.wait_until_stopped, 120))
         self.queue.put(self.pump.infuse)
@@ -716,19 +722,36 @@ class Main:
         If they are currently running, the pumps will actually stop.
         """
         if not self.pumps_running_bool:
+            if not self.oil_used == 0:
+                MsgBox = messagebox.askquestion('Warning', 'Oil has not been refilled! \n Do you still want to run pumps?', icon='warning')
+                if MsgBox == 'yes':
+                    pass
+                else:
+                    return
+
             if self.running_pos == "sample":
                 self.run_sample_command()
                 self.start_both_pumps(self.remaining_sample_real, self.auto_flowrate_variable.get())
             elif self.running_pos== "buffer":
+                if self.remaining_buffer_real == self.buffer_loop_vol_var.get():
+                    buffvol = self.remaining_buffer_real/2
+                elif self.remaining_buffer_real > 0.090:
+                    buffvol = 0.070
+                else:
+                    buffvol = self.remaining_buffer_real
+
+                self.target_vol=self.remaining_buffer_real - buffvol
                 self.run_buffer_command()
-                self.start_both_pumps(self.remaining_buffer_real, self.auto_flowrate_variable.get())
+                self.start_both_pumps(buffvol, self.auto_flowrate_variable.get())
             else:
                 self.python_logger.info("No running path set. Command Ignored.")
                 return
+            self.queue.put(self.toggle_running)
         else:
             self.stop_both_pumps()
+            self.queue.put(self.toggle_running)
+            self.refill_only_command()
 
-        self.queue.put(self.toggle_running)
 
     def start_both_pumps(self, vol, rt):
         # Set Pump settings
@@ -887,6 +910,11 @@ class Main:
         self.unset_insert_purge()
         pos=self.oil_insertpurge_var.get()
         if not self.is_insert_purging:
+            MsgBox = messagebox.askquestion('Warning', 'Are you sure you want to purge? (Loops must be clean)', icon='warning')
+            if MsgBox == 'yes':
+                pass
+            else:
+                return
             self.queue.put((self.python_logger.info, "Purgin insert with "+fluid))
             self.queue.put((self.loading_valve.switchvalve, self.loading_cell_var.get()))
             self.queue.put((self.sample_valve.switchvalve, 0))
@@ -906,6 +934,11 @@ class Main:
         pos=self.cerberus_oil_insertpurge_var.get()
 
         if not self.is_insert_sheath_purging:
+            MsgBox = messagebox.askquestion('Warning', 'Are you sure you want to purge? (Loops must be clean)', icon='warning')
+            if MsgBox == 'yes':
+                pass
+            else:
+                return
             self.queue.put((self.python_logger.info, "Purgin insert with "+fluid))
             self.queue.put((self.cerberus_loading_valve.switchvalve, self.cerberus_loading_cell_var.get()))
             self.queue.put((self.cerberus_oil_valve.switchvalve, pos))
@@ -1211,11 +1244,11 @@ class Main:
     def lower_vol(self):
         if self.running_pos == "buffer":
             self.remaining_buffer_vol_var.set(round(self.remaining_buffer_vol_var.get()-self.auto_flowrate_variable.get()/60000.0,5))
-            if self.remaining_buffer_vol_var.get()<=0:
+            if self.remaining_buffer_vol_var.get()<= self.target_vol:
                 self.run_pumps_button_command()
         elif self.running_pos == "sample":
             self.remaining_sample_vol_var.set(round(self.remaining_sample_vol_var.get()-self.auto_flowrate_variable.get()/60000.0,5))
-            if self.remaining_sample_vol_var.get()<=0:
+            if self.remaining_sample_vol_var.get()<= 0:
                 self.run_pumps_button_command()
 
 if __name__ == "__main__":
