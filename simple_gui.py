@@ -1,11 +1,15 @@
-"""This script creates a simple SAXS gui
-Controls, hardvard syringe pumps and valves
+"""This script creates a simple SAXS GUI.
 
-Pollack Lab-Cornell
-Josue San Emeterio
+'Simple' as a descriptor implies that this GUI is lacking complexity. As opposed
+to the GUI implemented in gui.py, this code will not interface with an Elveflow
+pump or SPEC, and simply controls Harvard syringe pumps and valves.
+
+Pollack Lab, Cornell University
+
+Authors:
+Josue San Emeterio (js3262@cornell.edu)
+Brady Sites (bas339@cornell.edu)
 """
-
-
 
 import tkinter as tk
 from tkinter import messagebox
@@ -23,6 +27,7 @@ import numpy as np
 import warnings
 
 FULLSCREEN = False   # For testing, turn this off
+LOG_FOLDER = "log"
 
 # TODO: hardcode variables and get rid of all magic numbers
 # TODO: design an actual object hierarchy to organize code
@@ -57,7 +62,20 @@ class Main:
                 positions, loop volumes, and execution lengths
             Setup: configure connections between all the various devices in
                 the setup
+
+        The program operates across three threads. The first is where the GUI
+        is hosted, the second executes any commands given from the Auto tab,
+        and the third from the Manual tab.
         """
+
+        # makes sure the logging directory exists, otherwise an error is thrown
+        if not os.path.exists(LOG_FOLDER):
+            print('Double checking log folder')
+            time.sleep(1)
+            if not os.path.exists(LOG_FOLDER):
+                raise FileNotFoundError("%s folder not found" % LOG_FOLDER)
+        elif not os.path.isdir(LOG_FOLDER):
+            raise NotADirectoryError("%s is not a folder" % LOG_FOLDER)
 
         self._lock = threading.RLock() # repeatable lock for thread-safe access
         self.python_logger = logging.getLogger("python") # create logger named "python"
@@ -353,7 +371,11 @@ class Main:
 
 
     def draw_static(self):
-        """Define the geometry of the frames and objects."""
+        """Define the geometry of the frames and objects.
+
+        Lays out all the static elements in the tabs, and defines the error
+        loggers.
+        """
         self.stop_button.grid(row=0, column=0, columnspan=2, rowspan=2, sticky='N')
         self.exit_button.grid(row=0, column=1, sticky='NE')
         self.core.grid(row=1, column=0)

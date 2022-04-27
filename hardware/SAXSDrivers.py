@@ -36,8 +36,6 @@ class SAXSController(serial.Serial):
         super().__init__(**kwargs)
         self.logger = logger
         self.enabled = False
-        if not os.path.exists('log'):
-            os.mkdir('log') # user may not have the logging directory, causing an exception to be thrown
         self.temp_logger = open('log/pump_%d.log' % time.time(), 'w+')
         # TODO: close properly
 
@@ -102,6 +100,10 @@ class HPump:
     communication with the pump and how to set up a pump "daisy chain," which
     is just two or more pumps connected in series to facilitate communications.
 
+    This class makes use of many commands and responses outlined in the
+    manual, and for further improvement, it is crucial to understand how the
+    pump communicates serially.
+
     ...
 
     Attributes
@@ -141,12 +143,13 @@ class HPump:
     # need a single serial for the class
     pumpserial = serial.Serial()
 
-    # Set port protperties
+    # Set port properties
     pumpserial.baudrate = 9600
     pumpserial.stopbits = 2
     pumpserial.timeout = 0.1
 
     # Variable to keep track if pump has a valid port-> Avoids crashing when not set up
+    # class variable permits sharing among pumps -> assumes they are chained together
     enabled = False
 
     def __init__(self, address=0, pc_connect=True, running=False, infusing=True, name="Pump", logger=[], hardware_configuration="", lock=None):
@@ -198,14 +201,14 @@ class HPump:
             self.address = str(address)
 
 # Pump action commands
-# To do in all. Read in confirmstion from pump.
+# TODO: (for all below) read in confirmation from pump(s)
 
     def start_pump(self, resource=pumpserial):
         """Send a start command to the pump.
 
         Based on the pump manual, a start command for a pump in a chain uses the
         following format:
-            <pump address> RUN <cr>
+            [pump address] RUN [cr]
         where the address is a mutable setting on the pump, and the carriage
         return character is represented in ASCII as \r.
         """
@@ -239,6 +242,7 @@ class HPump:
                 if not self.controller.is_open:
                     self.controller.open()
                 while self.controller.in_waiting > 0:  # Clear Buffer
+                    break
                     self.controller.readline_check()
                 self.controller.write(("-"+self.address+"RUN\r").encode())
                 time.sleep(0.2)
@@ -264,7 +268,7 @@ class HPump:
 
         Based on the pump manual, a start command for a pump in a chain uses the
         following format:
-            <pump address> STP <cr>
+            [pump address] STP [cr]
         where the address is a mutable setting on the pump, and the carriage
         return character is represented in ASCII as \r.
         """
