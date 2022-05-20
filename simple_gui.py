@@ -63,7 +63,7 @@ class Main:
             Setup: configure connections between all the various devices in
                 the setup
 
-        The program operates across three threads. The first is where the GUI
+        The program operates across three threads. The first is the main one where the GUI
         is hosted, the second executes any commands given from the Auto tab,
         and the third from the Manual tab.
         """
@@ -815,6 +815,8 @@ class Main:
         self.remaining_sample_vol_var.set(self.remaining_sample_real)
 
     def toggle_running(self):
+        """Toggles run status of the pumps, and triggers volume updates.
+        """
         self.pumps_running_bool = not self.pumps_running_bool
         if self.pumps_running_bool:
             bgcolor = "green"
@@ -1256,7 +1258,8 @@ class Main:
                 self.manual_page_buttons[i][y].grid(row=i+1, column=y)
 
     def volume_count_down(self):
-
+        """Decrement the sample or buffer volume every second while the pumps are running.
+        """
         if self.pumps_running_bool:
             self.lower_vol()
             self.main_window.after(1000, self.volume_count_down)
