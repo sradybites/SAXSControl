@@ -145,7 +145,7 @@ class Main:
         self.remaining_sample_real = 0.073
         self.oil_used = 0.0
         self.target_vol = 0.0
-        self.oil_used_var = tk.DoubleVar()
+        self.oil_used_var = tk.DoubleVar() # FIXME: redundant duplication of variables
         self.oil_used_label = tk.Label(self.auto_page, font=auto_button_half_font, text="Oil Used:", bg=auto_color)
         self.oil_used_vol = tk.Label(self.auto_page, font=auto_button_font, textvariable=self.oil_used_var)
         self.remaining_sample = tk.Label(self.auto_page, font=auto_button_half_font, text="Remaining Sample:", bg=auto_color)
@@ -1278,6 +1278,7 @@ class Main:
 
 if __name__ == "__main__":
     window = tk.Tk()
+    window.iconbitmap("img/cube_icon.ico") # set window icon :)
     print("initializing GUI...")
     Main(window)
     window.mainloop()
