@@ -26,7 +26,7 @@ import csv
 import numpy as np
 import warnings
 
-FULLSCREEN = False   # For testing, turn this off
+FULLSCREEN = True   # For testing, turn this off
 LOG_FOLDER = "log"
 
 # TODO: hardcode variables and get rid of all magic numbers
@@ -47,7 +47,10 @@ class Main:
         top-level application window
     listen_run_flag : threading.Event
         flag that instructs the control threads to keep running
-
+    remaining_buffer_vol_var : tk.DoubleVar
+        value representing remaining buffer volume, displayed on Auto page
+    remaining_buffer_real : float
+        another value representing buffer volume, but this one is not displayed on the GUI and only updates after pumps stop
     """
 
     def __init__(self, window):
@@ -140,12 +143,13 @@ class Main:
         self.run_sample = tk.Button(self.auto_page, text="Set Sample", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color, command=self.run_sample_command)  # ""
         # self.pause_pump = tk.Button(self.auto_page, text="Pause Pumps", font=auto_button_font, width=auto_button_width, height=3, bg=auto_color)  # This button pauses pumps between switching possitions. Should update infused vol
         self.run_pumps = tk.Button(self.auto_page, text="Run Pumps", font=auto_button_font, width=auto_button_width*2+2, height=3, command=self.run_pumps_button_command, bg="red", fg="white")  # This button is to restart pumps after pause. It needs to check for valve possitions, before starting.
-        self.remaining_buffer_vol_var = tk.DoubleVar(value = 0.145)
+        # A few variables are defined here so be careful. See the class docstring for more info on the specific variables.
+        self.remaining_buffer_vol_var = tk.DoubleVar(value = 0.145) # This is the value tied to the "Remaining Buffer:" label on the Auto page. It is lowered as the pumps are running.
         self.remaining_buffer_real = 0.145
         self.remaining_sample_real = 0.073
         self.oil_used = 0.0
         self.target_vol = 0.0
-        self.oil_used_var = tk.DoubleVar() # FIXME: redundant duplication of variables
+        self.oil_used_var = tk.DoubleVar()
         self.oil_used_label = tk.Label(self.auto_page, font=auto_button_half_font, text="Oil Used:", bg=auto_color)
         self.oil_used_vol = tk.Label(self.auto_page, font=auto_button_font, textvariable=self.oil_used_var)
         self.remaining_sample = tk.Label(self.auto_page, font=auto_button_half_font, text="Remaining Sample:", bg=auto_color)
@@ -179,6 +183,11 @@ class Main:
         self.purge_sheath_insert_soap_button = tk.Button(self.manual_page, text='Soap insert sheath', command=lambda: self.insert_sheath_purge("Soap"), font=auto_button_font, width=auto_button_width+5)
         self.purge_sheath_insert_water_button = tk.Button(self.manual_page, text='Water insert sheath', command=lambda: self.insert_sheath_purge("Water"), font=auto_button_font, width=auto_button_width+5)
 
+        ### Config Page ###
+        # FIXME: not all values that are displayed have their units labelled, which creates ambiguity
+        # TODO: implement a config file loader, so settings can be saved and reloaded.
+        #       This already exists in the gui.py file.
+
         # Purge Configs
 
         self.purge_possition_label = tk.Label(self.config_page, text="Purge valve positions:", bg=self.label_bg_color, width = 3)
@@ -200,11 +209,6 @@ class Main:
 
 
 
-
-        ### Config Page ###
-        # FIXME: not all values that are displayed have their units labelled, which creates ambiguity
-        # TODO: implement a config file loader, so settings can be saved and reloaded.
-        #       This already exists in the gui.py file.
         self.oil_valve_names_label =tk.Label(self.config_page,text="Oil Valve Configuration:", bg=self.gui_bg_color)
         self.coil_valve_names_label =tk.Label(self.config_page,text="Cerberus Oil Valve Configuration:", bg=self.gui_bg_color)
         self.loading_valve_names_label =tk.Label(self.config_page,text="Loading Valve Configuration:", bg=self.gui_bg_color)
@@ -371,10 +375,10 @@ class Main:
 
 
     def draw_static(self):
-        """Define the geometry of the frames and objects.
+        """Define the geometry of the frames and objects, create drivers and loggers.
 
         Lays out all the static elements in the tabs, and defines the error
-        loggers.
+        loggers as well as the instrument drivers.
         """
         self.stop_button.grid(row=0, column=0, columnspan=2, rowspan=2, sticky='N')
         self.exit_button.grid(row=0, column=1, sticky='NE')
@@ -499,7 +503,7 @@ class Main:
         self.I2CScanButton.grid(row=1, column=3)
         # self.refresh_com_list()
         # Create the default instruments
-        self.add_pump_set_buttons(name="Top Pump")  # Pump 1  TODO: set address explicitly
+        self.add_pump_set_buttons(name="Top Pump", address=0)  # Pump 1
         self.add_pump_set_buttons(name="Bottom Pump", address=1)  # Pump 2
         self.add_rheodyne_set_buttons(name="Loading", address=14)  # Loading valve 2
         self.add_rheodyne_set_buttons(name="Oil", address=8)  # Oil Valve
@@ -741,7 +745,7 @@ class Main:
         button was pressed for the position. No position, or more broadly
         an invalid position, will log that the command was ignored.
 
-        If they are currently running, the pumps will actually stop.
+        If they are currently running, the pumps will actually stop, and refill the syringes.
         """
         if not self.pumps_running_bool:
             if not self.oil_used == 0:
@@ -751,15 +755,19 @@ class Main:
                 else:
                     return
 
-            if self.running_pos == "sample":
+            if self.running_pos == "sample": # want to push sample
+                # just run all the sample
                 self.run_sample_command()
                 self.start_both_pumps(self.remaining_sample_real, self.auto_flowrate_variable.get())
-            elif self.running_pos== "buffer":
+            elif self.running_pos== "buffer": # want to push buffer
                 if self.remaining_buffer_real == self.buffer_loop_vol_var.get():
+                    # if loop is full, dispense half the loop
                     buffvol = self.remaining_buffer_real/2
                 elif self.remaining_buffer_real > 0.090:
+                    # if volumes don't match exactly, dispense 70uL
                     buffvol = 0.070
                 else:
+                    # if there's less than 90 uL left, get rid of it all.
                     buffvol = self.remaining_buffer_real
 
                 self.target_vol=self.remaining_buffer_real - buffvol
@@ -767,6 +775,7 @@ class Main:
                 self.start_both_pumps(buffvol, self.auto_flowrate_variable.get())
             else:
                 self.python_logger.info("No running path set. Command Ignored.")
+                # you need to press "Set Buffer/Sample" first!
                 return
             self.queue.put(self.toggle_running)
         else:
@@ -776,6 +785,10 @@ class Main:
 
 
     def start_both_pumps(self, vol, rt):
+        """Tells the pumps how much volume to infuse, at what flowrate, and starts them.
+
+        Pumps are set to push the same volume at the same rate.
+        """
         # Set Pump settings
         self.queue.put((self.pump.infuse_volume, vol, rt))
         self.queue.put((self.cerberus_pump.infuse_volume, vol, rt))
@@ -829,6 +842,8 @@ class Main:
 
 
     def run_buffer_command(self):
+        """Triggers switching of all the valves to run buffer, and calls self.toggle_to_sample
+        """
         self.queue.put((self.loading_valve.switchvalve, self.loading_cell_var.get()))
         self.queue.put((self.oil_valve.switchvalve, self.oil_pump_var.get()))
         self.queue.put((self.sample_valve.switchvalve, 0))
@@ -836,13 +851,17 @@ class Main:
         self.queue.put((self.cerberus_oil_valve.switchvalve, self.cerberus_oil_pump_var.get()))
         self.queue.put((self.ligand_valve.switchvalve, 0))
         self.queue.put(self.toggle_to_buffer)
-        # change valve possitions
+
     def toggle_to_buffer(self):
+        """Change Set buttons and run position to indicate buffer mode.
+        """
         self.run_buffer.config(bg="green", fg="white")
         self.run_sample.config(bg="white", fg="black")
         self.running_pos = "buffer"
 
     def run_sample_command(self):
+        """Triggers switching of all the valves to run sample, and calls self.toggle_to_sample
+        """
         self.queue.put((self.loading_valve.switchvalve, self.loading_cell_var.get()))
         self.queue.put((self.oil_valve.switchvalve, self.oil_pump_var.get()))
         self.queue.put((self.sample_valve.switchvalve, 1))
@@ -851,8 +870,9 @@ class Main:
         self.queue.put((self.ligand_valve.switchvalve, 1))
         self.queue.put(self.toggle_to_sample)
 
-        # change valve possitions
     def toggle_to_sample(self):
+        """Change Set buttons and run position to indicate sample mode.
+        """
         self.run_sample.config(bg="green", fg="white")
         self.run_buffer.config(bg="white", fg="black")
         self.running_pos = "sample"
@@ -1256,7 +1276,6 @@ class Main:
                 self.manual_page_buttons[i][y].grid(row=i+1, column=y)
 
     def volume_count_down(self):
-
         if self.pumps_running_bool:
             self.lower_vol()
             self.main_window.after(1000, self.volume_count_down)

@@ -32,7 +32,19 @@ class SAXSController(serial.Serial):
     """Class for communication with devices using the USB box."""
 
     def __init__(self, logger=[], **kwargs):
-        """Initialize class."""
+        """Initialize controller.
+        
+        ...
+
+        Attributes
+        ----------
+        logger : logging.Logger
+            python logger for debugging, errors, etc
+        enabled : bool
+            whether or not the controller is assigned a port
+        temp_logger : io.TextIOWrapper
+            a text stream for writing to the controller's log file
+        """
         super().__init__(**kwargs)
         self.logger = logger
         self.enabled = False
@@ -242,7 +254,7 @@ class HPump:
                 if not self.controller.is_open:
                     self.controller.open()
                 while self.controller.in_waiting > 0:  # Clear Buffer
-                    break
+                    break # FIXME: redundant code
                     self.controller.readline_check()
                 self.controller.write(("-"+self.address+"RUN\r").encode())
                 time.sleep(0.2)
@@ -526,6 +538,7 @@ class HPump:
             else:
                 self.logger.info("Error setting refill rate for "+self.name)
                 raise RuntimeError
+    
     def is_running(self, resource=pumpserial):
         with self._lock:
             running = False
